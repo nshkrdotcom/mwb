@@ -1,7 +1,7 @@
 [project]
 name = "mechanistic-workbench"
 version = "0.1.0"
-description = "Local-first mechanistic interpretability workbench for IPython research, artifact validation, evidence graphs, claim-safe cards, adapter-backed execution, provenance, and reproducible MI workflows."
+description = "Local-first mechanistic interpretability workbench for IPython research, artifact validation, evidence graphs, claim-safe cards, adapter-backed ingestion and explicitly validated execution paths, provenance, and reproducible MI workflows."
 readme = "README.md"
 requires-python = ">=3.11,<3.13"
 dependencies = [

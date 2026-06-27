@@ -2,89 +2,172 @@
 
 This report records the release-hardening gate for the world-class buildout.
 
-## Scope
+## Phase 25 — Prior Baseline
 
-Phase 25 hardens the local workbench after the evidence graph, ledgers,
+Phase 25 hardened the local workbench after the evidence graph, ledgers,
 hypothesis lifecycle, static compiler, causal verification, example geometry,
 diagnosis/probes, reference mechanisms, claim grammar, policy profiles, and
 adapter expansion phases.
 
-The release goal is not to add a new scientific claim. It is to prove that the
-repo has executable regressions for prior false positives/negatives, can read
-older file-backed state, documents public commands, and still passes the full
-QC gate.
+Prior QC gate passed:
 
-## Regression Coverage
+- `uv run pytest`: `123 passed, 3 skipped`
+- Graph rebuild: `30` edges, `23` nodes, `7` relation kinds.
+- `uv run mwb doctor`: `status: ok`.
 
-- Known false-positive confound remains blocked by the reference mechanism suite.
-- Control-leaky MechanismCard prose still blocks mechanism wording such as
-  `implements`.
-- Legacy adapter manifests and backend version files without stable refs still
-  rebuild into SQLite by directory ref.
-- README doc links are checked by tests.
-- Public CLI help snapshots cover root commands, adapter conformance commands,
-  and pyvene options.
+## Phase 26 — MWB Identity and Generic Adapter Boundary Hardening
 
-## Commands
+### Scope
 
-```bash
-uv run pytest tests/test_phase25_release_hardening.py
-uv sync
-uv run ruff check .
-uv run pytest
-MWB_RUN_REAL_ADAPTER_TESTS=1 uv run pytest tests/test_phase4_context.py -m integration
-uv run mwb adapter conformance transformer-lens --model EleutherAI/pythia-70m-deduped --device cpu
-uv run mwb adapter conformance saelens --model EleutherAI/pythia-70m-deduped --hook blocks.2.hook_resid_post --device cpu
-uv run mwb graph rebuild
-uv run mwb doctor
-uv run mwb repair-index --output .mechanism/workbench.repaired.sqlite
-rg -n "fake|dummy|mock|simulated|placeholder|smoke" src tests docs README.md pyproject.toml
-rg -n "implements|mechanism for|proves|isolated.*circuit|strong_candidate_evidence" src tests docs README.md pyproject.toml
-git status --short --branch
+This pass completes the repo-wide hardening so that:
+
+- MWB is the product.
+- `generic-bundle` is the neutral ingest path for MWB-shaped artifacts.
+- SELF-GROUND remains an optional dogfood adapter.
+- Generic code, generic docs, generic tests, and default workflows do not
+  depend on SELF-GROUND identity.
+- Adapter ingestion never upgrades evidence by itself.
+
+### What Changed
+
+**Documentation (pre-existing; reviewed for consistency):**
+- `README.md` was updated before this pass. Residual SELF-GROUND references in
+  generic sections were removed during this pass (lines 14, 66, 100, 712, 730).
+  Old SELF-GROUND-centric workflow sections replaced with:
+  - Generic-bundle ingest workflow section
+  - `## Optional Dogfood Adapter: SELF-GROUND` section (bounded)
+  - `init --name mwb-demo` replacing `--name self-ground` in examples
+  - `negation_demo_calibrated` replacing `negation_phase3_calibrated`
+- `docs/USAGE.md` reviewed; no edits required.
+- `docs/ADAPTERS.md` reviewed; no edits required.
+- `docs/buildout/README.md` reviewed; no edits required.
+
+**Generic bundle adapter (`src/mwb/adapters/generic_bundle.py`):**
+- Strict validation for `run_manifest.json`: required to be valid JSON object
+  containing `run_ref`; fails explicitly if missing.
+- Strict validation for `control_metrics.json`: required to be valid JSON object
+  containing `target_delta` and `matched_control_delta`; fails with actionable
+  error per missing field.
+- Optional artifact validation: `blocker_report.json`, `scientific_debt.json`,
+  `mechanism_card.json` must be valid JSON objects if present; rejected with
+  clear error otherwise.
+- Adapter provenance (`source_kind`, `adapter_id`, `adapter_display_name`,
+  `claim_bearing=False`) always written; cannot be inherited from source.
+- `shutil.copyfile` for `scientific_debt.json` replaced with explicit rewrite.
+
+**Scientific debt rewrite (`_rewrite_scientific_debt`):**
+- Rewrites top-level `run_ref` to new run ref.
+- Rewrites top-level `parents` if present.
+- Rewrites `mechanism_card_ref` if it embeds the old run ref.
+- Rewrites per-item `debt_ref` if it embeds the old run ref.
+- Sets `claim_bearing=False` on imported debt.
+- Raises `ValueError` if items or parents are not the expected types.
+
+**Blocker report rewrite (`_rewrite_blocker_report`):**
+- Always regenerates `wb_ref` to remove old run identity embedding.
+- Rewrites `run_ref` and `parents` to new run ref.
+
+**Package metadata (`pyproject.toml`):**
+- Description updated: "adapter-backed execution" → "adapter-backed ingestion
+  and explicitly validated execution paths".
+
+**Boundary test (`tests/adapters/test_self_ground_boundary.py`):**
+- Added `phase3_calibrated` to FORBIDDEN terms.
+- Added `docs/ADAPTERS.md` and `docs/buildout/` to ALLOWED_PREFIXES.
+- Added `## Adapter Registry` as an allowed section in `docs/USAGE.md`.
+- Added allowed line patterns for USAGE.md adapter QC test references.
+- Added regression assertion that README does not contain forbidden identities
+  outside allowed sections.
+
+**Generic bundle tests (`tests/adapters/test_generic_bundle_ingest.py`):**
+All required tests implemented (no mocking; real filesystem fixtures):
+- `test_generic_bundle_rejects_missing_run_manifest`
+- `test_generic_bundle_rejects_missing_control_metrics`
+- `test_generic_bundle_rejects_invalid_run_manifest_json`
+- `test_generic_bundle_rejects_non_object_run_manifest`
+- `test_generic_bundle_rejects_missing_run_ref`
+- `test_generic_bundle_rejects_invalid_control_metrics_json`
+- `test_generic_bundle_rejects_non_object_control_metrics`
+- `test_generic_bundle_rejects_missing_required_control_metrics`
+- `test_generic_bundle_rewrites_stale_blocker_report_refs`
+- `test_generic_bundle_rewrites_stale_scientific_debt_refs`
+- `test_generic_bundle_rejects_bad_blocker_report_json`
+- `test_generic_bundle_rejects_non_object_blocker_report`
+- `test_generic_bundle_rejects_invalid_scientific_debt_json`
+- `test_generic_bundle_rejects_non_object_scientific_debt`
+- `test_generic_bundle_ingest_remains_non_claim_bearing`
+- `test_generic_bundle_ingest_supports_card_diagnose_next_probe_graph`
+- `test_unknown_adapter_error_includes_available_adapter_ids`
+- `test_can_ingest_failure_does_not_make_inspect_unavailable`
+- `test_ingest_external_generic_bundle_routes_through_registry`
+- `test_adapters_list_does_not_depend_on_order`
+
+## QC Results
+
+### Leak Scan
+
+```
+rg -n "SELF-GROUND|self-ground|self_ground|E004|e004_specificity_rescue_matrix|run_self_ground|/self-ground|ml_research/self-ground|negation_phase3|phase3_calibrated" README.md docs src tests pyproject.toml
 ```
 
-## Observed Results
+Remaining hits — all allowed:
 
-- Release hardening suite: passed, `4 passed`.
+| File | Reason |
+|------|--------|
+| `README.md` | Only in `## Optional Dogfood Adapter: SELF-GROUND` (bounded) |
+| `docs/ADAPTERS.md` | Adapter guide; explicitly covers both adapters by design |
+| `docs/USAGE.md` | Only in `## Adapter Registry` and `## Optional Dogfood Adapter` sections |
+| `docs/buildout/README.md` | Build plan; references the scan pattern itself |
+| `docs/adapters/self_ground/` | Allowed location |
+| `src/mwb/adapters/self_ground/` | Allowed location |
+| `src/mwb/adapters/registry.py` | Explicit import line (allowed pattern) |
+| `tests/adapters/` | Allowed location |
+
+No hit appears in generic source, generic tests outside adapter tests, generic
+top-level docs outside bounded sections, or package metadata.
+
+### Full QC
+
 - `uv sync`: passed.
-- `uv run ruff check .`: passed.
-- `uv run pytest`: passed, `123 passed, 3 skipped`.
-- Real adapter integration test: passed, `1 passed, 3 deselected`.
-- TransformerLens conformance: passed with real model load and activation capture.
-- SAELens conformance: passed with real SAE load and feature ref round-trip.
-- Graph rebuild: passed with `30` edges, `23` nodes, and `7` relation kinds.
-- `uv run mwb doctor`: passed with `status: ok`.
-- `uv run mwb repair-index --output .mechanism/workbench.repaired.sqlite`: passed with `status: ok`, `adapter_manifests: 5`, `backend_versions: 5`, and `evidence_edges: 30`.
-- Scan review: passed. Hits were limited to protocol/report text, blocked-language tables, tests asserting blocked overclaims, historical ledger entries, and source-mined anti-pattern notes.
+- `uv run ruff check .`: passed (`All checks passed!`).
+- `uv run pytest`: passed (`154 passed, 3 skipped`).
+- `uv run mwb doctor`: passed (`status: ok`).
+- `uv run mwb graph rebuild`: passed (`49 edges, 32 nodes, 7 relation kinds`).
+- `uv run mwb ledger validate`: passed (`status: ok`).
 
-## Prior Green Baseline
+### Adapter Commands
 
-The preceding Phase 24 gate passed:
+- `uv run mwb adapters list --json`: passed; both `generic-bundle` and
+  `self-ground` listed.
+- `uv run mwb adapters inspect generic-bundle --json`: passed; `status: available`.
+- `uv run mwb adapters can-ingest generic-bundle tests/fixtures/generic_runs/control_leak --json`: passed; `status: available`.
+- `uv run mwb ingest external generic-bundle tests/fixtures/generic_runs/control_leak`: passed; `run_ref: run_external_generic_run_demo_control_leak`, `primary_blocker: control_leaky`.
 
-- `uv run pytest`: `119 passed, 3 skipped`.
-- `uv run mwb repair-index --output .mechanism/workbench.repaired.sqlite` restored
-  `adapter_manifests: 5` and `backend_versions: 5`.
+### Adapter Tests
+
+- `uv run pytest tests/adapters/test_generic_bundle_ingest.py`: `23 passed`.
+- `uv run pytest tests/adapters/test_self_ground_boundary.py`: `3 passed`.
+- `uv run pytest tests/adapters/test_self_ground_ingest.py`: `9 passed`.
+
+### Optional Real Integration
+
+Not run in this environment — TransformerLens/SAELens model downloads and GPU
+availability not present. Explicitly environment-gated, not relabelled as
+passed.
 
 ## Scan Policy
 
-The release scans are not expected to be empty because the repo intentionally
-contains blocked-language tables, tests asserting blocked overclaims, and QC
-protocol text that names forbidden patterns. All scan hits must be explainable
-as one of:
-
-- blocked-language or claim-grammar enforcement;
-- tests that assert overclaim blocking;
-- protocol/report text describing forbidden patterns;
-- historical ledger entries.
-
-No scan hit may represent a live fake backend path, smoke-only acceptance, or an
+No scan hit represents a live fake backend path, smoke-only acceptance, or an
 unqualified paper-facing mechanism claim.
 
-The final scan review found no live fake backend path, no smoke-only acceptance
-criterion, and no unqualified paper-facing mechanism claim.
+The boundary test (`test_self_ground_terms_do_not_appear_in_generic_surfaces`)
+enforces the allowed/forbidden surface automatically on every test run.
 
 ## Residual Risk
 
 Optional nnsight and pyvene dependencies are not installed in the current QC
 environment. Their adapters remain diagnostic-only unless a user installs and
 configures those backends for real conformance.
+
+Optional real adapter integration tests require `MWB_RUN_REAL_ADAPTER_TESTS=1`
+and a compatible GPU/CPU environment with model and SAE access.

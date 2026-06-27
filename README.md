@@ -11,7 +11,7 @@
 
 Mechanistic Workbench (`mwb`) is a local-first, IPython-native research workbench for mechanistic interpretability.
 
-It is designed to sit between exploratory notebook work and claim-bearing mechanistic evidence. The goal is not to replace TransformerLens, SAELens, SELF-GROUND, nnsight, pyvene, or other scientific execution libraries. The goal is to give local mechanistic-interpretability work a durable research state:
+It is designed to sit between exploratory notebook work and claim-bearing mechanistic evidence. The goal is not to replace TransformerLens, SAELens, nnsight, pyvene, or other scientific execution libraries. The goal is to give local mechanistic-interpretability work a durable research state:
 
 ```text
 scratch exploration
@@ -63,7 +63,7 @@ This repository contains a working local workbench with:
 * local `.mechanism/` artifact workspace;
 * SQLite indexing and rebuild/repair commands;
 * TransformerLens and SAELens adapter identity/conformance paths;
-* SELF-GROUND run ingestion;
+* generic-bundle and optional adapter ingest paths;
 * evidence graph rebuilds and graph queries;
 * research ledgers for runs, claims, decisions, and research logs;
 * hypothesis lifecycle states and transition receipts;
@@ -97,7 +97,7 @@ Some probe workflows are currently diagnostic or dry-run unless a real backend p
 
 MWB is not:
 
-* a replacement for TransformerLens, SAELens, nnsight, pyvene, or SELF-GROUND;
+* a replacement for TransformerLens, SAELens, nnsight, pyvene, or similar execution libraries;
 * a hosted experiment tracker;
 * a dashboard-first ML platform;
 * a generic tensor warehouse;
@@ -152,7 +152,7 @@ uv run pytest
 Initialize a local MWB project workspace:
 
 ```bash
-uv run mwb init --name self-ground
+uv run mwb init --name mwb-demo
 uv run mwb doctor
 ```
 
@@ -164,7 +164,7 @@ A minimal local loop:
 
 ```bash
 uv sync
-uv run mwb init --name self-ground
+uv run mwb init --name mwb-demo
 uv run mwb doctor
 uv run mwb ipython
 ```
@@ -375,7 +375,7 @@ claim fails
 uv sync
 uv run ruff check .
 uv run pytest
-uv run mwb init --name self-ground
+uv run mwb init --name mwb-demo
 uv run mwb doctor
 ```
 
@@ -394,15 +394,15 @@ uv run mwb rebuild-index --output .mechanism/workbench.rebuilt.sqlite
 uv run mwb demo negation --model EleutherAI/pythia-70m-deduped --device cpu
 ```
 
-### SELF-GROUND ingest workflow
+### Generic-bundle ingest workflow
 
 ```bash
-uv run mwb ingest self-ground /path/to/self-ground/runs/e004_specificity_rescue_matrix
+uv run mwb ingest external generic-bundle tests/fixtures/generic_runs/control_leak
 uv run mwb card latest
 uv run mwb diagnose latest
 uv run mwb next-probe latest
 uv run mwb next-probe latest --materialize
-uv run mwb run-probe .mechanism/runs/<run_ref>/probe.yaml
+uv run mwb graph rebuild
 ```
 
 If a materialized probe is a dry-run or diagnostic workflow, it remains non-claim-bearing unless a real backend execution path and artifact validation gate explicitly support a stronger posture.
@@ -452,7 +452,7 @@ Verification workflows write receipts and telemetry for implemented operations. 
 ### Example geometry
 
 ```bash
-uv run mwb bundle audit negation_phase3_calibrated
+uv run mwb bundle audit negation_demo_calibrated
 uv run mwb bundle rebalance --dry-run
 ```
 
@@ -524,26 +524,26 @@ mechanism for
 
 should remain blocked unless the relevant artifact, control, verification, generalization, and policy gates pass.
 
-## Typical SELF-GROUND dogfood loop
+## Optional Dogfood Adapter: SELF-GROUND
 
-A common workflow is:
+SELF-GROUND is an optional dogfood adapter. MWB does not depend on SELF-GROUND and is not a SELF-GROUND-specific codebase.
+
+When SELF-GROUND run artifacts are available, ingest them with:
 
 ```bash
-uv run mwb init --name self-ground
+uv run mwb ingest self-ground /path/to/self-ground/runs/<run-id>
+uv run mwb ingest external self-ground /path/to/self-ground/runs/<run-id>
+```
 
-uv run mwb ingest self-ground /path/to/self-ground/runs/e004_specificity_rescue_matrix
+Both routes go through the same adapter registry dispatcher.
 
-uv run mwb diagnose latest
+After ingest:
 
-uv run mwb next-probe latest --materialize
-
-uv run mwb run-probe .mechanism/runs/<run_ref>/probe.yaml
-
-uv run mwb graph rebuild
-
+```bash
 uv run mwb card latest
-
-uv run mwb draft-check docs/fixture_draft.md
+uv run mwb diagnose latest
+uv run mwb next-probe latest --materialize
+uv run mwb graph rebuild
 ```
 
 Interpretation discipline:
@@ -709,7 +709,7 @@ Near-term priorities:
 
 9. **Implement strict artifact validation.** Scientific status should come from validated artifact content, not command success. MWB should validate required files, required fields, control metrics, intervention receipts, blocker reports, and claim-impacting artifacts before allowing stronger evidence posture or stronger claim language.
 
-10. **Build a configurable but strict SELF-GROUND execution bridge.** MWB should call real SELF-GROUND code through explicit command templates and typed execution requests. The bridge should capture the command, arguments, working directory, environment summary, git identity, stdout, stderr, return code, start/end time, duration, produced paths, and validation results. It should never fake execution, write dummy success artifacts, silently fall back to dry-run, or treat return code `0` as scientific success.
+10. **Build a configurable but strict optional adapter execution bridge.** MWB should call optional adapter backends through explicit command templates and typed execution requests. The bridge should capture the command, arguments, working directory, environment summary, git identity, stdout, stderr, return code, start/end time, duration, produced paths, and validation results. It should never fake execution, write dummy success artifacts, silently fall back to dry-run, or treat return code `0` as scientific success.
 
 11. **Execute one real supported probe class before broadening scope.** The first real backend loop should support one concrete probe type well, such as a smallest-axis-extension / sweep-style follow-up, rather than presenting many superficial probe types that only work as dry-runs.
 
@@ -727,7 +727,7 @@ Near-term priorities:
 
 18. **Harden backend and adapter conformance.** Backend integrations should have explicit capability reports, dependency identity, model identity, SAE identity where relevant, hook or space compatibility checks, artifact schemas, failure-mode tests, and integration tests. Unsupported or diagnostic-only adapters should not be allowed to raise evidence tier.
 
-19. **Expand adapters only after the core evidence loop is stable.** TransformerLens, SAELens, SELF-GROUND, nnsight, pyvene, Neuronpedia, SAEBench, ACDC, EAP, Tracr, or other integrations should be added or promoted only when their real capabilities, artifacts, identities, and conformance behavior are clear. Adapter breadth should not come before one reliable evidence loop.
+19. **Expand adapters only after the core evidence loop is stable.** TransformerLens, SAELens, nnsight, pyvene, Neuronpedia, SAEBench, ACDC, EAP, Tracr, or other integrations should be added or promoted only when their real capabilities, artifacts, identities, and conformance behavior are clear. Optional dogfood adapters follow the same rule. Adapter breadth should not come before one reliable evidence loop.
 
 20. **Improve CLI and research UX without turning MWB into ceremony.** The CLI should be the actuator layer for agents and reproducible workflows, not the primary mental model for human researchers. Commands should improve real execution, artifact validation, claim safety, state compaction, next-action quality, run comparison, or failure diagnosis. They should not make humans manually do bookkeeping MWB can infer or capture.
 
