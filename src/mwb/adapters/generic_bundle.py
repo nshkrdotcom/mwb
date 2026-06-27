@@ -64,6 +64,12 @@ class GenericBundleIngestAdapter:
             errors.extend(metrics_errors)
 
         # --- optional artifacts ---
+        # blocker_report.json and scientific_debt.json are rewritten on ingest
+        # to replace stale run refs.  mechanism_card.json is accepted here only
+        # as a validatable source artifact: the payload is checked to be a JSON
+        # object, but MWB regenerates the authoritative MechanismCard after
+        # ingest via card_from_run().  The source card does not become the
+        # authoritative card and does not upgrade evidence posture.
         for name in ["blocker_report.json", "scientific_debt.json", "mechanism_card.json"]:
             opt_path = source / name
             if not opt_path.exists():
@@ -234,6 +240,8 @@ def _rewrite_blocker_report(
 ) -> dict[str, Any]:
     """Rewrite stale run_ref/parents/wb_ref in an imported blocker report.
 
+    After rewriting known fields, performs a recursive residual stale-ref scan.
+    Raises ValueError if any string in the result still contains old_run_ref.
     Fails if the payload is not a JSON object.  Regenerates wb_ref to remove
     any embedding of the old run identity.
     """
@@ -243,6 +251,15 @@ def _rewrite_blocker_report(
     payload.setdefault("wb_type", "BlockerReport")
     # Always regenerate wb_ref so the old run identity is not embedded.
     payload["wb_ref"] = stable_ref("blocker", run_ref, payload)
+
+    # Residual stale-ref detection.
+    if old_run_ref:
+        stale_paths = _find_stale_ref_paths(payload, old_run_ref, exclude=run_ref)
+        if stale_paths:
+            raise ValueError(
+                "blocker_report.json: stale source run ref remains at "
+                + ", ".join(stale_paths)
+            )
     return payload
 
 
@@ -315,6 +332,16 @@ def _rewrite_scientific_debt(
     # Imported debt remains non-claim-bearing.
     payload["claim_bearing"] = False
 
+    # Residual stale-ref detection: reject if any string still embeds old_run_ref
+    # in a context that is not attributable to new_run_ref.
+    if old_run_ref:
+        stale_paths = _find_stale_ref_paths(payload, old_run_ref, exclude=new_run_ref)
+        if stale_paths:
+            raise ValueError(
+                "scientific_debt.json: stale source run ref remains at "
+                + ", ".join(stale_paths)
+            )
+
     return payload
 
 
@@ -339,6 +366,50 @@ def _rewrite_ref_list(
             f"scientific_debt.json: '{field}' must be a list, got {type(value).__name__}"
         )
     return [new_ref if item == old_ref else str(item) for item in value]
+
+
+def _find_stale_ref_paths(
+    value: Any,
+    needle: str,
+    *,
+    path: str = "$",
+    exclude: str = "",
+) -> list[str]:
+    """Recursively find paths within value where needle appears outside of exclude.
+
+    Occurrences of needle that only appear as part of the exclude string are
+    ignored.  This handles the common case where new_run_ref embeds old_run_ref
+    as a suffix, e.g. ``run_external_generic_run_old_source``.
+
+    Only str values are checked; dict/list are traversed recursively.  Other
+    scalar types (int, float, bool, None) are not checked.
+
+    Returns a list of dot/bracket path strings, e.g. ['items[0].evidence_ref'].
+    An empty list means no stale refs were found.
+    """
+    if not needle:
+        return []
+    found: list[str] = []
+    if isinstance(value, str):
+        # Blank out all occurrences of the exclude string, then check if the
+        # needle still appears.  This avoids false positives when needle is a
+        # substring of the legitimate new ref.
+        masked = value.replace(exclude, "") if exclude else value
+        if needle in masked:
+            found.append(path.lstrip("$."))
+    elif isinstance(value, dict):
+        for key, child in value.items():
+            child_path = f"{path}.{key}" if path != "$" else key
+            found.extend(
+                _find_stale_ref_paths(child, needle, path=child_path, exclude=exclude)
+            )
+    elif isinstance(value, list):
+        for i, child in enumerate(value):
+            child_path = f"{path}[{i}]"
+            found.extend(
+                _find_stale_ref_paths(child, needle, path=child_path, exclude=exclude)
+            )
+    return found
 
 
 def _read_json(path: Path) -> dict[str, Any]:

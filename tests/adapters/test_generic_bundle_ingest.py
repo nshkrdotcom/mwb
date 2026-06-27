@@ -15,6 +15,7 @@ import json
 import subprocess
 from pathlib import Path
 
+import pytest
 from typer.testing import CliRunner
 
 from mwb.cli import app
@@ -486,3 +487,161 @@ def test_adapters_list_does_not_depend_on_order(tmp_path: Path) -> None:
     adapter_ids = {row["adapter_id"] for row in json.loads(listed.output)["adapters"]}
     assert "generic-bundle" in adapter_ids
     assert "self-ground" in adapter_ids
+
+
+# ---------------------------------------------------------------------------
+# Residual stale-ref detection tests
+# ---------------------------------------------------------------------------
+
+
+def test_generic_bundle_rejects_unrewriteable_stale_debt_refs(tmp_path: Path) -> None:
+    """Ingest must reject scientific_debt.json that contains stale source-run
+    refs in fields the rewrite logic does not know about.
+
+    The adapter rewrites known fields (run_ref, mechanism_card_ref, debt_ref,
+    item run_ref fields).  Unknown fields such as evidence_ref that still embed
+    the old run ref must be detected and the ingest rejected with an explicit
+    error naming the residual field path.
+    """
+    init_git_repo(tmp_path)
+    project = ProjectManager.init(tmp_path, name="mwb-demo")
+    bundle = tmp_path / "bundle"
+    old_run_ref = "run_old_source"
+    _make_bundle(bundle, manifest=_make_valid_manifest(old_run_ref), metrics=_make_valid_metrics())
+
+    stale_debt = {
+        "run_ref": old_run_ref,
+        "status": "insufficient_evidence",
+        "items": [
+            {
+                "kind": "controls",
+                "description": "stale evidence ref in unknown field",
+                "required_resolution": "remove stale source pointer",
+                # evidence_ref is not a known rewrite target; embeds old_run_ref.
+                "evidence_ref": f"artifact_for_{old_run_ref}",
+            }
+        ],
+    }
+    (bundle / "scientific_debt.json").write_text(json.dumps(stale_debt), encoding="utf-8")
+
+    from mwb.adapters.generic_bundle import GenericBundleIngestAdapter
+
+    with pytest.raises(ValueError, match="stale source run ref"):
+        GenericBundleIngestAdapter().ingest(bundle, project=project)
+
+
+def test_rejects_unrewriteable_stale_debt_refs_error_names_field_path(
+    tmp_path: Path,
+) -> None:
+    """The stale-ref error message must include the field path."""
+    init_git_repo(tmp_path)
+    project = ProjectManager.init(tmp_path, name="mwb-demo")
+    bundle = tmp_path / "bundle"
+    old_run_ref = "run_source_a"
+    _make_bundle(bundle, manifest=_make_valid_manifest(old_run_ref), metrics=_make_valid_metrics())
+
+    stale_debt = {
+        "run_ref": old_run_ref,
+        "status": "insufficient_evidence",
+        "items": [
+            {
+                "kind": "controls",
+                "description": "nested stale pointer",
+                "required_resolution": "clear",
+                "evidence_ref": f"path/to/{old_run_ref}/artifact.json",
+            }
+        ],
+    }
+    (bundle / "scientific_debt.json").write_text(json.dumps(stale_debt), encoding="utf-8")
+
+    from mwb.adapters.generic_bundle import GenericBundleIngestAdapter
+
+    with pytest.raises(ValueError) as exc_info:
+        GenericBundleIngestAdapter().ingest(bundle, project=project)
+
+    msg = str(exc_info.value)
+    assert "evidence_ref" in msg or "items" in msg
+
+
+def test_generic_bundle_rejects_unrewriteable_stale_blocker_report_refs(
+    tmp_path: Path,
+) -> None:
+    """Ingest must reject blocker_report.json that contains stale source-run
+    refs in fields the rewrite logic does not know about.
+
+    The adapter rewrites run_ref, parents, and regenerates wb_ref.  Unknown
+    fields such as source_artifact that embed the old run ref must be detected
+    and rejected.
+    """
+    init_git_repo(tmp_path)
+    project = ProjectManager.init(tmp_path, name="mwb-demo")
+    bundle = tmp_path / "bundle"
+    old_run_ref = "run_old_source"
+    _make_bundle(bundle, manifest=_make_valid_manifest(old_run_ref), metrics=_make_valid_metrics())
+
+    stale_blocker = {
+        "wb_type": "BlockerReport",
+        "wb_ref": f"blocker_{old_run_ref}",
+        "run_ref": old_run_ref,
+        "parents": [old_run_ref],
+        "blockers": ["control_leaky"],
+        "primary_blocker": "control_leaky",
+        "blocking_metrics": [],
+        # Unknown field that embeds old run ref — should be caught.
+        "source_artifact": f"runs/{old_run_ref}/control_metrics.json",
+    }
+    (bundle / "blocker_report.json").write_text(json.dumps(stale_blocker), encoding="utf-8")
+
+    from mwb.adapters.generic_bundle import GenericBundleIngestAdapter
+
+    with pytest.raises(ValueError, match="stale source run ref"):
+        GenericBundleIngestAdapter().ingest(bundle, project=project)
+
+
+def test_find_stale_ref_paths_helper() -> None:
+    """Direct unit test of the _find_stale_ref_paths helper."""
+    from mwb.adapters.generic_bundle import _find_stale_ref_paths
+
+    payload = {
+        "run_ref": "run_new",
+        "items": [
+            {
+                "debt_ref": "debt_run_new_control",
+                "evidence_ref": "artifact_for_run_old",
+            }
+        ],
+        "metadata": {
+            "source": "runs/run_old/metrics.json",
+        },
+    }
+    needle = "run_old"
+    paths = _find_stale_ref_paths(payload, needle)
+    assert "items[0].evidence_ref" in paths
+    assert "metadata.source" in paths
+    # run_ref and debt_ref do not contain needle.
+    assert not any("run_ref" in p and "items" not in p for p in paths)
+
+    # Empty needle should return no hits.
+    assert _find_stale_ref_paths(payload, "") == []
+
+    # Clean payload should return no hits.
+    clean = {"run_ref": "run_new", "items": [{"debt_ref": "debt_run_new_ctrl"}]}
+    assert _find_stale_ref_paths(clean, needle) == []
+
+    # Occurrences of needle that are part of the exclude string must NOT be flagged.
+    # This is the key case: new_run_ref = "run_external_generic_run_old_source"
+    # contains old_run_ref = "run_old_source" but that is a legitimate rewrite.
+    new_ref = "run_external_generic_run_old"
+    rewritten = {
+        "run_ref": new_ref,
+        "items": [{"debt_ref": f"debt_{new_ref}_control"}],
+        # unknown field with genuine stale ref (not part of new_ref):
+        "evidence_ref": "artifact_for_run_old_separate_pointer",
+    }
+    paths_with_exclude = _find_stale_ref_paths(rewritten, needle, exclude=new_ref)
+    # run_ref and debt_ref should NOT be flagged (needle only appears via new_ref).
+    assert "run_ref" not in paths_with_exclude
+    assert not any("debt_ref" in p for p in paths_with_exclude)
+    # evidence_ref has "run_old" in "artifact_for_run_old_separate_pointer" which
+    # is NOT just part of new_ref, so it SHOULD be flagged.
+    assert "evidence_ref" in paths_with_exclude

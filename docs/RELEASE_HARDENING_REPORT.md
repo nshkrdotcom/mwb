@@ -11,9 +11,11 @@ adapter expansion phases.
 
 Prior QC gate passed:
 
-- `uv run pytest`: `123 passed, 3 skipped`
+- `uv run pytest`: `119 passed, 3 skipped`
 - Graph rebuild: `30` edges, `23` nodes, `7` relation kinds.
 - `uv run mwb doctor`: `status: ok`.
+- Adapter manifest check: `adapter_manifests: 5`
+- Backend version check: `backend_versions: 5`
 
 ## Phase 26 — MWB Identity and Generic Adapter Boundary Hardening
 
@@ -171,3 +173,80 @@ configures those backends for real conformance.
 
 Optional real adapter integration tests require `MWB_RUN_REAL_ADAPTER_TESTS=1`
 and a compatible GPU/CPU environment with model and SAE access.
+
+## Phase 26 Follow-up — Boundary Hardening Patch
+
+### What Changed
+
+**Boundary allowlist tightened (`tests/adapters/test_self_ground_boundary.py`):**
+- `docs/ADAPTERS.md` is no longer whole-file allowed. Each permitted line is
+  named explicitly in `ALLOWED_LINE_PATTERNS["docs/ADAPTERS.md"]`.
+- `docs/buildout/` is no longer whole-directory allowed. Permitted lines are
+  named explicitly in `ALLOWED_LINE_PATTERNS["docs/buildout/README.md"]`.
+- `## Adapter Registry` section of `docs/USAGE.md` is no longer a stripped
+  section. Instead, the three permitted self-ground CLI lines are named
+  explicitly in `ALLOWED_LINE_PATTERNS["docs/USAGE.md"]`.
+- Added `test_active_docs_do_not_contain_forbidden_default_identity_patterns`
+  to assert that all four active docs (README.md, USAGE.md, ADAPTERS.md,
+  buildout/README.md) are free of forbidden regression patterns outside bounded
+  sections.
+
+**Buildout README updated (`docs/buildout/README.md`):**
+- The rg scan-pattern code block that spelled out all forbidden strings verbatim
+  was replaced with a reference to the automated boundary test.
+
+**Residual stale-ref detection added (`src/mwb/adapters/generic_bundle.py`):**
+- `_find_stale_ref_paths(value, needle, *, exclude, path)` recursively scans
+  dicts/lists/strings for `needle`, masking out `exclude` before checking so
+  that occurrences of `old_run_ref` that only appear as part of `new_run_ref`
+  are not falsely flagged.
+- `_rewrite_scientific_debt()` calls `_find_stale_ref_paths` with
+  `exclude=new_run_ref` after all known-field rewrites. Raises `ValueError`
+  with field path(s) if any residual stale ref is found.
+- `_rewrite_blocker_report()` calls `_find_stale_ref_paths` with
+  `exclude=run_ref` after regenerating `wb_ref`. Raises `ValueError` with
+  field path(s) if any residual stale ref is found.
+
+**Optional `mechanism_card.json` behavior clarified:**
+- Comment added to `validate_source()` making clear that `mechanism_card.json`
+  is accepted only as a validatable source artifact; MWB regenerates the
+  authoritative MechanismCard via `card_from_run()` after ingest; the source
+  card does not become authoritative and does not upgrade evidence posture.
+
+**New tests (`tests/adapters/test_generic_bundle_ingest.py`):**
+- `test_generic_bundle_rejects_unrewriteable_stale_debt_refs`: ingest of
+  scientific_debt.json with stale ref in an unknown field (evidence_ref) raises
+  ValueError with "stale source run ref".
+- `test_rejects_unrewriteable_stale_debt_refs_error_names_field_path`: error
+  message names the residual field path.
+- `test_generic_bundle_rejects_unrewriteable_stale_blocker_report_refs`: ingest
+  of blocker_report.json with stale ref in an unknown field (source_artifact)
+  raises ValueError.
+- `test_find_stale_ref_paths_helper`: direct unit test of the helper covering
+  masking, empty needle, clean payload, and the exclude parameter.
+
+### QC Results (Phase 26 Follow-up)
+
+- `uv sync`: passed.
+- `uv run ruff check .`: passed (`All checks passed!`).
+- `uv run pytest`: `158 passed, 3 skipped`.
+- `uv run mwb doctor`: passed (`status: ok`).
+- `uv run mwb graph rebuild`: passed (`63 edges, 39 nodes, 7 relation kinds`).
+- `uv run mwb ledger validate`: passed (`status: ok`).
+
+### Adapter Command Results
+
+- `uv run mwb adapters list --json`: both `generic-bundle` and `self-ground` listed.
+- `uv run mwb adapters inspect generic-bundle --json`: `status: available`.
+- `uv run mwb adapters can-ingest generic-bundle tests/fixtures/generic_runs/control_leak --json`: `status: available`.
+- `uv run mwb ingest external generic-bundle tests/fixtures/generic_runs/control_leak`: `run_ref: run_external_generic_run_demo_control_leak`, `primary_blocker: control_leaky`.
+
+### Adapter Test Results
+
+- `uv run pytest tests/adapters/test_generic_bundle_ingest.py`: `27 passed`.
+- `uv run pytest tests/adapters/test_self_ground_boundary.py`: `3 passed`.
+- `uv run pytest tests/adapters/test_self_ground_ingest.py`: `9 passed`.
+
+### Optional Real Integration
+
+Not run — environment-gated, not relabelled as passed.

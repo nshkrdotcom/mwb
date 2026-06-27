@@ -333,7 +333,10 @@ uv run mwb adapter conformance saelens --model EleutherAI/pythia-70m-deduped --h
 Boundary scan:
 
 ```bash
-rg -n "SELF-GROUND|self-ground|self_ground|E004|e004_specificity_rescue_matrix|run_self_ground|/self-ground|ml_research/self-ground|negation_phase3|phase3_calibrated" README.md docs src tests pyproject.toml
+# Run the automated boundary scan instead of this grep directly.
+# See tests/adapters/test_self_ground_boundary.py for the exact terms and
+# allowed-location policy.
+uv run pytest tests/adapters/test_self_ground_boundary.py -v
 ```
 
 Allowed hits only in:
