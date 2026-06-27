@@ -691,15 +691,77 @@ A feature is not complete merely because a file exists, a command returns output
 
 Near-term priorities:
 
-1. keep the IPython scratch workflow low-friction;
-2. make agent-facing state compact and machine-readable;
-3. strengthen safe latest-run semantics;
-4. close real backend execution loops only where artifact validation and conformance are real;
-5. preserve the distinction between diagnostic, association, causal-test, and claim-bearing states;
-6. expand adapters only after core evidence behavior is stable;
-7. keep context compaction and ledgers current enough for future agents or researchers to resume.
+1. **Close one complete real execution loop.** The first major target is an end-to-end workflow where MWB can diagnose a blocked run, generate the next probe, materialize it, execute it through a real backend, validate the resulting artifacts, ingest the outputs, update the evidence graph, regenerate a claim-safe card, and produce the next concrete action.
 
-Longer-term directions include richer notebook promotion workflows, broader backend integration, more reference mechanisms, stronger run diffing, multi-run comparison, and better agent handoff files.
+2. **Keep the IPython scratch workflow low-friction.** Human research should remain fast, exploratory, and notebook-friendly. MWB should preserve scratch work through passive capture and useful context, without forcing every cell, plot, failed attempt, or hunch into formal project ceremony.
+
+3. **Support retrospective promotion from scratch work to formal evidence.** Notebook and IPython exploration should be promotable when it becomes useful: selected cells, artifacts, runs, or notes should be convertible into hypotheses, probes, evidence-linked artifacts, or claim-relevant records. Scratch work should motivate formal work, not automatically become formal evidence.
+
+4. **Make agent-facing state compact and machine-readable.** Agents should be able to ask MWB what is currently true, what is blocked, what the latest real execution is, what artifacts are missing, what language is allowed, what language is forbidden, and what exact action should happen next. Core commands should expose stable JSON suitable for tool-calling agents.
+
+5. **Add first-class agent status and next-action workflows.** MWB should provide explicit commands for agent status, diagnosis, next-probe generation, probe execution, card generation, claim checks, and context compaction. These commands should return enough structured information for an agent to continue without rereading notebooks, terminal logs, or scattered project notes.
+
+6. **Strengthen safe latest-run semantics.** `latest` should never be ambiguous when evidence is involved. MWB should distinguish latest-any, latest-dry-run, latest-diagnostic, latest-real-execution, latest-artifact-validated, and latest-claim-bearing-candidate. Commands that require real evidence should fail or warn when the selected run is weaker than required.
+
+7. **Separate operational status, evidence posture, and claim permission.** A command can complete successfully without producing usable scientific evidence. A backend can execute successfully while artifacts are incomplete. A diagnostic result can be scientifically useful without being claim-bearing. MWB should keep dry-run, diagnostic, real-executed, artifact-validated, causal-test, controlled-causal-test, and claim-bearing-candidate states visibly separate.
+
+8. **Stabilize typed run and artifact contracts.** Runs should have clear manifests, execution requests, execution receipts, backend manifests, artifact validation reports, blocker reports, scientific debt records, evidence edges, and mechanism cards. Missing files should have explicit meaning: not applicable, optional, missing because dry-run, missing because backend failed, or missing because the implementation is incomplete.
+
+9. **Implement strict artifact validation.** Scientific status should come from validated artifact content, not command success. MWB should validate required files, required fields, control metrics, intervention receipts, blocker reports, and claim-impacting artifacts before allowing stronger evidence posture or stronger claim language.
+
+10. **Build a configurable but strict SELF-GROUND execution bridge.** MWB should call real SELF-GROUND code through explicit command templates and typed execution requests. The bridge should capture the command, arguments, working directory, environment summary, git identity, stdout, stderr, return code, start/end time, duration, produced paths, and validation results. It should never fake execution, write dummy success artifacts, silently fall back to dry-run, or treat return code `0` as scientific success.
+
+11. **Execute one real supported probe class before broadening scope.** The first real backend loop should support one concrete probe type well, such as a smallest-axis-extension / sweep-style follow-up, rather than presenting many superficial probe types that only work as dry-runs.
+
+12. **Map backend outputs back into MWB state.** Real backend outputs should be located deterministically, validated, copied or referenced as source artifacts, indexed, linked to the originating probe, and reflected in the evidence graph, blocker reports, scientific debt, cards, and next actions.
+
+13. **Make evidence graph semantics precise.** MWB should distinguish provenance from support. Edges such as derived-from, depends-on, tested-by, supports, contradicts, confounded-by, fails-on, and generalizes-to should have clear meanings. A materialized probe, successful dry-run, or successful command with invalid artifacts should not create a support edge.
+
+14. **Treat claim checks as scientific test gates.** Claim and draft validation should behave like tests: a claim fails with explicit blockers, MWB identifies the missing artifact or control, recommends the next action, the agent runs the probe, artifacts are validated, and the claim is either still blocked or narrowly allowed. Claim grammar should be an active guardrail, not just a reporting feature.
+
+15. **Make blocked claims actionable.** A useful failure should say what is blocked, why it is blocked, which artifact or control is missing, what command or probe would address it, and what weaker language remains allowed. Blockers should produce next diagnostic paths where possible, not just dead-end status labels.
+
+16. **Preserve scientific debt explicitly.** MWB should distinguish implementation TODOs from scientific debt. Scientific debt should record the specific reason stronger claims are blocked, such as leaky controls, incomplete artifacts, insufficient effect size, missing heldout generalization, metadata mismatch, or unsupported backend capability.
+
+17. **Carry policy profiles through runs.** Strictness settings should be explicit and copied into run manifests so future changes to project policy do not rewrite history. Dry-run claim-bearing should remain forbidden, artifact validation should remain required, and stronger claims should require the relevant controls and validation gates.
+
+18. **Harden backend and adapter conformance.** Backend integrations should have explicit capability reports, dependency identity, model identity, SAE identity where relevant, hook or space compatibility checks, artifact schemas, failure-mode tests, and integration tests. Unsupported or diagnostic-only adapters should not be allowed to raise evidence tier.
+
+19. **Expand adapters only after the core evidence loop is stable.** TransformerLens, SAELens, SELF-GROUND, nnsight, pyvene, Neuronpedia, SAEBench, ACDC, EAP, Tracr, or other integrations should be added or promoted only when their real capabilities, artifacts, identities, and conformance behavior are clear. Adapter breadth should not come before one reliable evidence loop.
+
+20. **Improve CLI and research UX without turning MWB into ceremony.** The CLI should be the actuator layer for agents and reproducible workflows, not the primary mental model for human researchers. Commands should improve real execution, artifact validation, claim safety, state compaction, next-action quality, run comparison, or failure diagnosis. They should not make humans manually do bookkeeping MWB can infer or capture.
+
+21. **Harden command output and error messages.** Relevant commands should report execution status, evidence posture, claim-bearing status, primary blocker, next command, warnings, and missing artifacts. Errors should be structured for unsupported probe kinds, missing backends, failed conformance, dry-run latest selection, incomplete artifacts, and missing context files.
+
+22. **Improve probe materialization UX.** Materialized probes should say where the probe file is, whether it is runnable, what dry-run command exists, what real execution command exists if supported, what artifacts are expected, whether claim-bearing evidence is possible, and why execution is blocked if unsupported.
+
+23. **Keep IPython helpers aligned with safe workflow semantics.** IPython helpers should make it easy to inspect runs, diagnose blockers, view cards, create notes, request next probes, and launch supported probe workflows while still making scratch-vs-formal and dry-run-vs-real distinctions visible.
+
+24. **Make persistence rebuildable from artifacts.** The local SQLite index should be treated as an operational index, not the source of truth. MWB should be able to rebuild or repair the index from artifact files, sessions, runs, ledgers, evidence edges, cards, and manifests.
+
+25. **Use atomic writes for important local artifacts.** Critical files such as manifests, execution requests, execution receipts, artifact validation reports, evidence graph outputs, ledgers, and context files should be written safely enough for local-first research work.
+
+26. **Keep ledgers and context compaction current.** MWB should maintain run ledgers, claim ledgers, decision logs, blocker reports, scientific debt, current context, phase status, open questions, and agent resume prompts. A future researcher or agent should be able to resume from canonical state rather than reconstructing the project from memory.
+
+27. **Add compact change and run-diff reporting.** Agents should not have to reread the entire repo or all artifacts after each step. MWB should summarize what changed, what became stronger or weaker, what blockers were added or resolved, whether claim language changed, and what should run next.
+
+28. **Support exportable evidence bundles.** MWB should eventually produce portable bundles containing manifests, policy snapshots, artifact references or copies, hashes, evidence graph state, cards, and claim constraints so work can be reviewed or handed off without relying on ambient local context.
+
+29. **Preserve backward compatibility with existing runs.** Older ingested or dry-run artifacts should remain readable. Missing newer execution files should be classified correctly rather than silently rewritten or treated as evidence.
+
+30. **Expand reference mechanisms and benchmark-style examples.** Once the real execution and evidence semantics are stable, MWB should include more reference mechanisms and known example workflows that exercise artifact validation, claim checks, blocker derivation, and evidence graph behavior.
+
+31. **Improve report and paper-facing provenance only after evidence behavior is reliable.** Drafting workflows should help cite artifacts, cards, claims, and evidence constraints without overclaiming. Paper-facing tools should not become a way to launder weak evidence into stronger language.
+
+32. **Add broader notebook promotion and provenance features later.** Richer notebook capture, larger object provenance, session browsing, cell selection, artifact promotion, and formalization workflows are useful longer-term directions, but they should not delay the real backend loop.
+
+33. **Add deeper multi-run comparison.** Longer-term MWB should compare runs across axes, models, layers, hooks, controls, prompt sets, and probe types; identify regressions or strengthened evidence; and summarize what changed scientifically rather than only what changed operationally.
+
+34. **Add UI layers only after the state model is trustworthy.** A UI may eventually be useful for browsing runs, blockers, evidence graphs, cards, sessions, and next actions. It should come after the underlying artifacts, graph semantics, validation, and claim gates are dependable.
+
+35. **Keep release hardening continuous.** Each completed phase should keep tests green, preserve real integration paths, update documentation, update compact context, and avoid fake progress. Unit fixtures are acceptable for coverage, but fixture-only paths must not satisfy scientific or claim-bearing acceptance.
+
+Longer-term, MWB should become a local-first research operating layer for mechanistic interpretability: fast enough for human scratch work, strict enough for agent execution, durable enough for long-running projects, and disciplined enough that scientific claims remain tied to real artifacts, validated controls, explicit blockers, and reproducible execution history.
 
 ## License
 
