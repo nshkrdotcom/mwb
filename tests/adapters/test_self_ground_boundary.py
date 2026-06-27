@@ -3,19 +3,22 @@
 Scans README.md, docs/, src/, tests/, and pyproject.toml to ensure that
 SELF-GROUND terms appear only in allowed locations:
   - src/mwb/adapters/self_ground/
-  - tests/adapters/test_self_ground_*.py
+  - tests/adapters/test_self_ground_boundary.py
+  - tests/adapters/test_self_ground_ingest.py
   - docs/adapters/self_ground/
   - docs/archive/
   - bounded optional adapter sections in README.md and docs/USAGE.md
   - explicit adapter registry import lines in src/mwb/adapters/registry.py
-  - explicit backward-compatibility lines in test files
-  - specific named lines in docs/ADAPTERS.md and docs/USAGE.md
+  - specific named lines in docs/ADAPTERS.md, docs/USAGE.md, docs/buildout/
 
-Non-negotiable: generic source code, generic tests, generic top-level docs, and
+Non-negotiable: generic source code, generic tests (including
+tests/adapters/test_generic_bundle_ingest.py), generic top-level docs, and
 default-workflow examples must not use SELF-GROUND identity.
 
 docs/ADAPTERS.md and docs/buildout/ are NOT wholesale-allowed. Every allowed
 hit in those files must be a named line or a bounded section.
+tests/adapters/ is NOT wholesale-allowed. Only the two SELF-GROUND-specific
+adapter test files are exempt; generic adapter tests are scanned.
 """
 
 from __future__ import annotations
@@ -43,16 +46,22 @@ FORBIDDEN = re.compile(
     )
 )
 
-# Files / directory prefixes where SELF-GROUND terms are structurally allowed
-# (e.g. the adapter source code and its dedicated tests/docs).
-# Do NOT add docs/ADAPTERS.md or docs/buildout/ here — use named line patterns.
+# Directory/file prefixes where SELF-GROUND terms are structurally allowed.
+# Do NOT add tests/adapters/ here — only specific SELF-GROUND test files are exempt.
 ALLOWED_PREFIXES = (
     "src/mwb/adapters/self_ground/",
-    "tests/adapters/",           # adapter tests, including boundary/ingest tests
     "docs/adapters/self_ground/",
     "docs/archive/",
-    # Compliance/build docs that necessarily document the boundary policy itself.
+    # Compliance doc that necessarily documents the boundary policy and scan results.
     "docs/RELEASE_HARDENING_REPORT.md",
+)
+
+# Specific test files in tests/adapters/ that are SELF-GROUND-specific and exempt.
+# Generic adapter tests (e.g. test_generic_bundle_ingest.py) are NOT listed here
+# and therefore ARE scanned by the boundary test.
+ALLOWED_TEST_FILE_PATTERNS = (
+    "tests/adapters/test_self_ground_boundary.py",
+    "tests/adapters/test_self_ground_ingest.py",
 )
 
 # ---------------------------------------------------------------------------
@@ -68,15 +77,19 @@ ALLOWED_LINE_PATTERNS: dict[str, list[str]] = {
         "from mwb.adapters.self_ground.ingest import SelfGroundIngestAdapter",
         "from mwb.adapters.self_ground.commands import register_commands",
     ],
-    # USAGE.md QC section references the adapter test files by name.
+    # USAGE.md QC section references adapter test filenames as commands to run.
     "docs/USAGE.md": [
         "uv run pytest tests/adapters/test_self_ground_boundary.py",
         "uv run pytest tests/adapters/test_self_ground_ingest.py",
-        # Adapter Registry section: inspect/can-ingest for both adapters.
-        "uv run mwb adapters inspect self-ground --json",
-        "uv run mwb adapters can-ingest self-ground /path/to/self-ground/runs/<run-id> --json",
-        "uv run mwb ingest external self-ground /path/to/self-ground/runs/<run-id>",
+        # Optional dogfood section: convenience alias documentation.
         "uv run mwb ingest self-ground /path/to/self-ground/runs/<run-id>",
+    ],
+    # test_generic_bundle_ingest.py verifies registry completeness, which
+    # requires asserting that self-ground is present in the adapter list.
+    # These are legitimate test assertions, not generic-surface identity leaks.
+    "tests/adapters/test_generic_bundle_ingest.py": [
+        'assert set(adapters) >= {"generic-bundle", "self-ground"}',
+        'assert "self-ground" in adapter_ids',
     ],
     # ADAPTERS.md: adapter guide that covers both adapters; each allowed line is
     # explicit adapter CLI usage or boundary-rule text in the adapter guide.
@@ -173,6 +186,20 @@ def test_readme_and_usage_frame_self_ground_as_optional_adapter_only() -> None:
     assert "SELF-GROUND is available only as an optional dogfood adapter" in usage
     assert "SELF-GROUND" not in _strip_allowed_sections("README.md", readme)
     assert "SELF-GROUND" not in _strip_allowed_sections("docs/USAGE.md", usage)
+    # USAGE.md stripped of the optional dogfood section must contain no self-ground
+    # terms — the generic Adapter Registry section must be SELF-GROUND-free.
+    # Filter out the individual named-allowed lines before checking, since those
+    # lines (e.g. QC test filenames) are intentionally present.
+    usage_allowed_lines = set(ALLOWED_LINE_PATTERNS.get("docs/USAGE.md", []))
+    stripped_usage = _strip_allowed_sections("docs/USAGE.md", usage)
+    usage_non_allowed = "\n".join(
+        line for line in stripped_usage.splitlines()
+        if line.strip() not in usage_allowed_lines
+    )
+    for term in ("self-ground", "SELF-GROUND", "self_ground"):
+        assert term not in usage_non_allowed, (
+            f"docs/USAGE.md contains {term!r} outside the Optional Dogfood Adapter section"
+        )
 
 
 def test_active_docs_do_not_contain_forbidden_default_identity_patterns() -> None:
@@ -215,7 +242,7 @@ def _scan_files() -> list[Path]:
 
 
 def _is_allowed_path(relative: str) -> bool:
-    return relative.startswith(ALLOWED_PREFIXES)
+    return relative.startswith(ALLOWED_PREFIXES) or relative in ALLOWED_TEST_FILE_PATTERNS
 
 
 def _is_allowed_line(relative: str, line: str) -> bool:

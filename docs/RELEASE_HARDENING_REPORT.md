@@ -250,3 +250,37 @@ and a compatible GPU/CPU environment with model and SAE access.
 ### Optional Real Integration
 
 Not run — environment-gated, not relabelled as passed.
+
+## Phase 26 Follow-up 2 — Boundary Precision Patch
+
+**Boundary test (`tests/adapters/test_self_ground_boundary.py`):**
+- Replaced broad `"tests/adapters/"` in `ALLOWED_PREFIXES` with precise
+  `ALLOWED_TEST_FILE_PATTERNS` containing only the two SELF-GROUND-specific
+  adapter test files. Generic adapter tests (incl.
+  `test_generic_bundle_ingest.py`) are now scanned by the boundary test.
+- Removed `self-ground` Adapter Registry CLI lines from `ALLOWED_LINE_PATTERNS`
+  for `docs/USAGE.md`. Only the QC test filename lines and the optional dogfood
+  section alias command remain allowed.
+- Added `tests/adapters/test_generic_bundle_ingest.py` to
+  `ALLOWED_LINE_PATTERNS` for two registry-completeness assertion lines that
+  legitimately reference `self-ground`.
+- Updated `_is_allowed_path()` to check `ALLOWED_TEST_FILE_PATTERNS` in
+  addition to `ALLOWED_PREFIXES`.
+- Added per-line filtering to the USAGE.md stripped regression assertion so
+  QC-section allowed lines do not trigger false positives.
+
+**`docs/USAGE.md`:**
+- Removed `self-ground` from the generic `## Adapter Registry` section.
+  `inspect self-ground`, `can-ingest self-ground`, and
+  `ingest external self-ground` commands are now only in the bounded
+  `## Optional Dogfood Adapter` section.
+
+**QC (Phase 26 Follow-up 2):**
+- `uv run ruff check .`: `All checks passed!`
+- `uv run pytest`: `158 passed, 3 skipped`
+- `uv run mwb doctor`: `status: ok`
+- `uv run mwb graph rebuild`: `63 edges, 39 nodes, 7 relation kinds`
+- `uv run mwb ledger validate`: `status: ok`
+- `uv run mwb card latest` / `diagnose latest` / `next-probe latest --materialize`: all passed
+- Focused adapter tests: `3 passed` (boundary), `27 passed` (generic-bundle), `9 passed` (self-ground ingest)
+

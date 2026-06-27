@@ -332,21 +332,18 @@ Inspect registered ingest adapters:
 ```bash
 uv run mwb adapters list --json
 uv run mwb adapters inspect generic-bundle --json
-uv run mwb adapters inspect self-ground --json
 ```
 
 Check whether a source path can be ingested:
 
 ```bash
 uv run mwb adapters can-ingest generic-bundle tests/fixtures/generic_runs/control_leak --json
-uv run mwb adapters can-ingest self-ground /path/to/self-ground/runs/<run-id> --json
 ```
 
 Ingest through the generic dispatcher:
 
 ```bash
 uv run mwb ingest external generic-bundle tests/fixtures/generic_runs/control_leak
-uv run mwb ingest external self-ground /path/to/self-ground/runs/<run-id>
 ```
 
 The singular `adapter` namespace is used for backend conformance checks:
