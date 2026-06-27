@@ -158,7 +158,7 @@ def test_failed_static_gate_blocks_claim_bearing_verification() -> None:
 
 def test_compile_hypothesis_cli_writes_report(tmp_path: Path, monkeypatch) -> None:
     init_git_repo(tmp_path)
-    project = ProjectManager.init(tmp_path, name="self-ground")
+    project = ProjectManager.init(tmp_path, name="mwb-demo")
     monkeypatch.chdir(tmp_path)
     hypothesis_file = tmp_path / "hypothesis.json"
     hypothesis_file.write_text(json.dumps(base_hypothesis(static_payload())), encoding="utf-8")

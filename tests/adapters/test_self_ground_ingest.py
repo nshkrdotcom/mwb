@@ -4,10 +4,10 @@ from pathlib import Path
 
 from typer.testing import CliRunner
 
+from mwb.adapters.self_ground import ingest_self_ground_run, validate_self_ground_artifacts
 from mwb.cli import app
 from mwb.project import ProjectManager
 from mwb.workflows.draft_guard import check_draft_text
-from mwb.workflows.self_ground_ingest import ingest_self_ground_run
 
 
 def init_git_repo(path: Path) -> None:
@@ -160,14 +160,14 @@ def write_e004_artifact(path: Path) -> None:
 
 def test_self_ground_ingest_writes_workbench_run_artifacts(tmp_path: Path) -> None:
     init_git_repo(tmp_path)
-    project = ProjectManager.init(tmp_path, name="self-ground")
+    project = ProjectManager.init(tmp_path, name="mwb-demo")
     source = tmp_path / "e004_specificity_rescue_matrix"
     write_e004_artifact(source)
 
     run_dir = ingest_self_ground_run(source, project=project)
 
     assert run_dir == (
-        project.mechanism_dir / "runs" / "run_self_ground_e004_specificity_rescue_matrix"
+        project.mechanism_dir / "runs" / "run_adapter_self_ground_e004_specificity_rescue_matrix"
     )
     manifest = json.loads((run_dir / "run_manifest.json").read_text())
     metrics = json.loads((run_dir / "control_metrics.json").read_text())
@@ -175,7 +175,9 @@ def test_self_ground_ingest_writes_workbench_run_artifacts(tmp_path: Path) -> No
     next_probe = json.loads((run_dir / "next_probe.json").read_text())
     card = json.loads((run_dir / "mechanism_card.json").read_text())
 
-    assert manifest["source_kind"] == "self_ground_e004"
+    assert manifest["source_kind"] == "external_adapter_ingest"
+    assert manifest["adapter_id"] == "self-ground"
+    assert manifest["adapter_source_kind"] == "self_ground_e004"
     assert manifest["status"] == "insufficient_evidence"
     assert manifest["tried_axes"]["layers"] == ["blocks.2.hook_resid_post"]
     assert manifest["source_artifacts"]["comparison/matrix_summary.csv"]["status"] == "present"
@@ -188,10 +190,22 @@ def test_self_ground_ingest_writes_workbench_run_artifacts(tmp_path: Path) -> No
     assert "mechanism for" in card["blocked_language"]
 
 
+def test_self_ground_validation_requires_comparison_and_forensics_csvs(tmp_path: Path) -> None:
+    source = tmp_path / "e004_specificity_rescue_matrix"
+    write_e004_artifact(source)
+
+    statuses = validate_self_ground_artifacts(source)
+
+    assert statuses["comparison/best_runs_by_family.csv"]["status"] == "present"
+    assert statuses["comparison/best_runs_by_specificity.csv"]["row_count"] == 1
+    assert statuses["forensics/control_suite_breakdown.csv"]["status"] == "present"
+    assert statuses["forensics/task_outlier_table.csv"]["row_count"] == 1
+
+
 def test_self_ground_ingest_cli_and_latest_resolution(tmp_path: Path, monkeypatch) -> None:
     init_git_repo(tmp_path)
     monkeypatch.chdir(tmp_path)
-    ProjectManager.init(tmp_path, name="self-ground")
+    ProjectManager.init(tmp_path, name="mwb-demo")
     source = tmp_path / "e004_specificity_rescue_matrix"
     write_e004_artifact(source)
     runner = CliRunner()
@@ -204,9 +218,45 @@ def test_self_ground_ingest_cli_and_latest_resolution(tmp_path: Path, monkeypatc
     assert next_probe.exit_code == 0, next_probe.output
     assert card.exit_code == 0, card.output
     ingest_payload = json.loads(ingest.output)
-    assert ingest_payload["run_ref"] == "run_self_ground_e004_specificity_rescue_matrix"
+    assert ingest_payload["run_ref"] == "run_adapter_self_ground_e004_specificity_rescue_matrix"
     assert json.loads(next_probe.output)["diagnosis"]["primary"] == "control_leaky"
-    assert json.loads(card.output)["run_ref"] == "run_self_ground_e004_specificity_rescue_matrix"
+    assert json.loads(card.output)["run_ref"] == (
+        "run_adapter_self_ground_e004_specificity_rescue_matrix"
+    )
+
+
+def test_generic_ingest_dispatcher_routes_to_self_ground_adapter(
+    tmp_path: Path, monkeypatch
+) -> None:
+    init_git_repo(tmp_path)
+    monkeypatch.chdir(tmp_path)
+    ProjectManager.init(tmp_path, name="mwb-demo")
+    source = tmp_path / "e004_specificity_rescue_matrix"
+    write_e004_artifact(source)
+    runner = CliRunner()
+
+    result = runner.invoke(app, ["ingest", "external", "self-ground", str(source)])
+
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.output)
+    assert payload["adapter_id"] == "self-ground"
+    assert payload["run_ref"] == "run_adapter_self_ground_e004_specificity_rescue_matrix"
+
+
+def test_adapter_registry_cli_exposes_self_ground_as_optional_dogfood() -> None:
+    runner = CliRunner()
+
+    listed = runner.invoke(app, ["adapters", "list", "--json"])
+    inspected = runner.invoke(app, ["adapters", "inspect", "self-ground", "--json"])
+
+    assert listed.exit_code == 0, listed.output
+    assert inspected.exit_code == 0, inspected.output
+    list_payload = json.loads(listed.output)
+    inspect_payload = json.loads(inspected.output)
+    assert list_payload["adapters"][0]["adapter_id"] == "self-ground"
+    assert inspect_payload["adapter_id"] == "self-ground"
+    assert inspect_payload["claim_bearing"] is False
+    assert "Optional dogfood adapter" in inspect_payload["notes"]
 
 
 def test_draft_guard_ignores_blocked_terms_inside_claim_marker() -> None:

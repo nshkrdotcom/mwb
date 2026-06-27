@@ -76,7 +76,7 @@ def test_next_probe_missing_fields_is_artifact_incomplete() -> None:
 def test_sweep_and_next_probe_cli_write_outputs(tmp_path: Path, monkeypatch) -> None:
     init_git_repo(tmp_path)
     monkeypatch.chdir(tmp_path)
-    ProjectManager.init(tmp_path, name="self-ground")
+    ProjectManager.init(tmp_path, name="mwb-demo")
     hypothesis = tmp_path / "hypothesis.json"
     hypothesis.write_text(
         json.dumps(

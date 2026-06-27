@@ -32,7 +32,7 @@ def test_ipython_execute_captures_bounded_stdout_and_stderr(
     tmp_path: Path, monkeypatch
 ) -> None:
     init_git_repo(tmp_path)
-    ProjectManager.init(tmp_path, name="self-ground")
+    ProjectManager.init(tmp_path, name="mwb-demo")
     monkeypatch.chdir(tmp_path)
     runner = CliRunner()
 
@@ -56,7 +56,7 @@ def test_ipython_execute_captures_bounded_stdout_and_stderr(
 
 def test_repair_index_alias_rebuilds_sqlite_from_files(tmp_path: Path, monkeypatch) -> None:
     init_git_repo(tmp_path)
-    ProjectManager.init(tmp_path, name="self-ground")
+    ProjectManager.init(tmp_path, name="mwb-demo")
     monkeypatch.chdir(tmp_path)
     runner = CliRunner()
     run = runner.invoke(app, ["ipython", "--execute", "note = ctx.note('repair')"])
@@ -76,7 +76,7 @@ def test_ipython_capture_indexes_cell_and_parent_lineage_edges(
     tmp_path: Path, monkeypatch
 ) -> None:
     init_git_repo(tmp_path)
-    project = ProjectManager.init(tmp_path, name="self-ground")
+    project = ProjectManager.init(tmp_path, name="mwb-demo")
     monkeypatch.chdir(tmp_path)
     runner = CliRunner()
 

@@ -1,0 +1,19 @@
+{
+  "claim_ref": "claim_demo_mechanism_blocked",
+  "claim_text": "A candidate feature family is a mechanism for the inspected contrast set.",
+  "claim_type": "mechanism",
+  "evidence": {
+    "mechanism_card": {
+      "blockers": [
+        "control_leaky"
+      ],
+      "evidence_tier": "association",
+      "scientific_debt": [
+        {
+          "blocker": "control_leaky",
+          "status": "unresolved"
+        }
+      ]
+    }
+  }
+}

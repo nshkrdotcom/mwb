@@ -1,0 +1,21 @@
+{
+  "allowed_language": [
+    "is associated with",
+    "is correlated with",
+    "is a candidate marker for"
+  ],
+  "blocked_language": [
+    "causes",
+    "is necessary for",
+    "is sufficient for",
+    "implements",
+    "mechanism for",
+    "specificity"
+  ],
+  "claim_ref": "claim_run_demo_control_leak",
+  "evidence_tier": "association",
+  "run_ref": "run_demo_control_leak",
+  "status": "insufficient_evidence",
+  "wb_ref": "mc_run_demo_control_leak",
+  "wb_type": "MechanismCard"
+}

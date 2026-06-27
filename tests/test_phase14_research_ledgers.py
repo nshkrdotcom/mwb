@@ -258,7 +258,7 @@ def test_ledger_validate_parses_and_indexes_research_ledgers(
     from mwb.sqlite_index import fetch_payload
 
     init_git_repo(tmp_path)
-    project = ProjectManager.init(tmp_path, name="self-ground")
+    project = ProjectManager.init(tmp_path, name="mwb-demo")
     write_valid_ledgers(project)
     monkeypatch.chdir(tmp_path)
 
@@ -288,7 +288,7 @@ def test_ledger_cli_validate_and_rebuild_preserve_ledgers(
     from mwb.sqlite_index import fetch_payload, rebuild_sqlite_index
 
     init_git_repo(tmp_path)
-    project = ProjectManager.init(tmp_path, name="self-ground")
+    project = ProjectManager.init(tmp_path, name="mwb-demo")
     write_valid_ledgers(project)
     monkeypatch.chdir(tmp_path)
     runner = CliRunner()
@@ -307,7 +307,7 @@ def test_ledger_cli_validate_and_rebuild_preserve_ledgers(
 
 def test_ledger_proposals_are_human_reviewable_files(tmp_path: Path, monkeypatch) -> None:
     init_git_repo(tmp_path)
-    project = ProjectManager.init(tmp_path, name="self-ground")
+    project = ProjectManager.init(tmp_path, name="mwb-demo")
     refs = write_run_and_card(project)
     monkeypatch.chdir(tmp_path)
     runner = CliRunner()
@@ -334,7 +334,7 @@ def test_ledger_proposals_are_human_reviewable_files(tmp_path: Path, monkeypatch
 def test_project_init_creates_git_visible_research_scaffold(tmp_path: Path) -> None:
     init_git_repo(tmp_path)
 
-    ProjectManager.init(tmp_path, name="self-ground")
+    ProjectManager.init(tmp_path, name="mwb-demo")
 
     assert (tmp_path / "research" / "logs" / "claim_ledger.md").exists()
     assert (tmp_path / "research" / "logs" / "run_ledger.csv").exists()

@@ -1,0 +1,26 @@
+{
+  "available_axes": {
+    "layers": [
+      "blocks.1.hook_resid_post",
+      "blocks.2.hook_resid_post",
+      "blocks.3.hook_resid_post"
+    ],
+    "patch_modes": [
+      "delta",
+      "direct"
+    ]
+  },
+  "claim_bearing": false,
+  "evidence_posture": "diagnostic_insufficient",
+  "run_ref": "run_demo_control_leak",
+  "source_kind": "mwb_demo_fixture",
+  "status": "insufficient_evidence",
+  "tried_axes": {
+    "layers": [
+      "blocks.2.hook_resid_post"
+    ],
+    "patch_modes": [
+      "delta"
+    ]
+  }
+}

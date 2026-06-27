@@ -134,7 +134,7 @@ def test_optional_adapter_cli_writes_persisted_manifest_and_rebuilds_sqlite(
 ) -> None:
     init_git_repo(tmp_path)
     monkeypatch.chdir(tmp_path)
-    project = ProjectManager.init(tmp_path, name="self-ground")
+    project = ProjectManager.init(tmp_path, name="mwb-demo")
     runner = CliRunner()
 
     result = runner.invoke(
@@ -184,7 +184,7 @@ def test_optional_pyvene_and_neuronpedia_cli_commands_write_conformance(
 ) -> None:
     init_git_repo(tmp_path)
     monkeypatch.chdir(tmp_path)
-    ProjectManager.init(tmp_path, name="self-ground")
+    ProjectManager.init(tmp_path, name="mwb-demo")
     runner = CliRunner()
 
     pyvene = runner.invoke(
@@ -236,7 +236,7 @@ def test_optional_pyvene_and_neuronpedia_cli_commands_write_conformance(
 
 def test_artifact_registry_records_external_artifact_pointers(tmp_path: Path) -> None:
     init_git_repo(tmp_path)
-    project = ProjectManager.init(tmp_path, name="self-ground")
+    project = ProjectManager.init(tmp_path, name="mwb-demo")
 
     lfs_pointer = tmp_path / "weights.safetensors"
     lfs_pointer.write_text(

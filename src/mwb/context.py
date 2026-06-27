@@ -113,10 +113,10 @@ class NegationDomain:
     ctx: RunContext
 
     def load(self, name: str) -> DomainBundle:
-        if name != "phase3_calibrated":
+        if name != "demo_calibrated":
             raise ValueError(f"unknown built-in negation bundle: {name}")
         bundle_file = resources.files("mwb.resources.bundles").joinpath(
-            "negation_phase3_calibrated.yaml"
+            "negation_demo_calibrated.yaml"
         )
         data = YAML(typ="safe").load(bundle_file.read_text(encoding="utf-8"))
         encoded = json.dumps(data, sort_keys=True, separators=(",", ":"))

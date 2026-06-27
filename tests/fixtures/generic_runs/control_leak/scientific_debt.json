@@ -1,0 +1,14 @@
+{
+  "items": [
+    {
+      "blocker": "control_leaky",
+      "debt_ref": "debt_run_demo_control_leak_control_leaky",
+      "description": "Controls moved too much to support specificity or mechanism wording.",
+      "kind": "controls",
+      "required_resolution": "Refresh controls or rerun the smallest untried axis extension."
+    }
+  ],
+  "mechanism_card_ref": "mc_run_demo_control_leak",
+  "run_ref": "run_demo_control_leak",
+  "status": "insufficient_evidence"
+}

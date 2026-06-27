@@ -1,0 +1,8 @@
+source_run_ref: run_demo_control_leak
+probe_kind: sweep_axis_extension
+runnable: true
+parameters:
+  axis:
+    layer: blocks.1.hook_resid_post
+  dry_run: true
+  target_ref: run_demo_control_leak

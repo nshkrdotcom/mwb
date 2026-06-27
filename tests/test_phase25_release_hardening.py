@@ -44,7 +44,7 @@ def test_release_regression_suite_blocks_known_false_positives() -> None:
 
 def test_release_legacy_mechanism_state_without_new_refs_rebuilds(tmp_path: Path) -> None:
     init_git_repo(tmp_path)
-    project = ProjectManager.init(tmp_path, name="self-ground")
+    project = ProjectManager.init(tmp_path, name="mwb-demo")
     adapter_dir = tmp_path / ".mechanism" / "adapters" / "legacy_adapter"
     adapter_dir.mkdir(parents=True)
     (adapter_dir / "manifest.json").write_text(

@@ -125,19 +125,19 @@ def test_rebalance_dry_run_generates_heldout_and_control_proposals() -> None:
     assert any(item["kind"] == "add_control_examples" for item in proposal.proposals)
 
 
-def test_bundle_audit_cli_writes_report_and_links_e004_forensics(
+def test_bundle_audit_cli_writes_generic_report(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
     init_git_repo(tmp_path)
-    ProjectManager.init(tmp_path, name="self-ground")
+    ProjectManager.init(tmp_path, name="mwb-demo")
     monkeypatch.chdir(tmp_path)
     runner = CliRunner()
 
-    result = runner.invoke(app, ["bundle", "audit", "negation_phase3_calibrated"])
+    result = runner.invoke(app, ["bundle", "audit", "negation_demo_calibrated"])
 
     assert result.exit_code == 0, result.output
     payload = json.loads(result.output)
-    assert payload["bundle_name"] == "phase3_calibrated"
-    assert payload["source_links"]["self_ground_e004_forensics"].endswith("forensics_summary.md")
+    assert payload["bundle_name"] == "demo_calibrated"
+    assert payload["source_links"] == {}
     assert (tmp_path / ".mechanism" / "bundle_audits" / "latest_bundle_audit.json").exists()

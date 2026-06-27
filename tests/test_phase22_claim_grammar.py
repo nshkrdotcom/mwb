@@ -142,7 +142,7 @@ def test_inline_override_is_visible_but_does_not_upgrade_blocked_claim() -> None
 def test_claim_check_cli_writes_report_and_restores_sqlite(tmp_path: Path, monkeypatch) -> None:
     init_git_repo(tmp_path)
     monkeypatch.chdir(tmp_path)
-    project = ProjectManager.init(tmp_path, name="self-ground")
+    project = ProjectManager.init(tmp_path, name="mwb-demo")
     fixture = tmp_path / "claim.json"
     fixture.write_text(
         json.dumps(

@@ -1,0 +1,20 @@
+{
+  "blockers": [
+    "control_leaky"
+  ],
+  "blocking_metrics": [
+    {
+      "name": "matched_control_delta",
+      "status": "fail",
+      "threshold": "< 0.8 * target_delta",
+      "value": 0.45
+    }
+  ],
+  "parents": [
+    "run_demo_control_leak"
+  ],
+  "primary_blocker": "control_leaky",
+  "run_ref": "run_demo_control_leak",
+  "wb_ref": "blocker_run_demo_control_leak",
+  "wb_type": "BlockerReport"
+}

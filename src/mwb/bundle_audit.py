@@ -19,10 +19,6 @@ from mwb.sqlite_index import initialize_schema, insert_payload
 JsonDict = dict[str, Any]
 NEGATION_MARKERS = (" not ", " not.", "n't", "never", "false that")
 DEFAULT_BASELINE_MARGIN_MIN = 0.1
-SELF_GROUND_E004_FORENSICS = Path(
-    "/home/home/p/g/n/learning/ml_research/self-ground/"
-    "runs/e004_specificity_rescue_matrix/forensics/forensics_summary.md"
-)
 
 
 class BundleAuditService:
@@ -162,10 +158,10 @@ class BundleAuditService:
 
 def _load_bundle_payload(name: str) -> dict[str, Any]:
     normalized = name.removeprefix("negation_")
-    if normalized != "phase3_calibrated":
+    if normalized != "demo_calibrated":
         raise ValueError(f"unknown built-in bundle: {name}")
     bundle_file = resources.files("mwb.resources.bundles").joinpath(
-        "negation_phase3_calibrated.yaml"
+        "negation_demo_calibrated.yaml"
     )
     return YAML(typ="safe").load(bundle_file.read_text(encoding="utf-8"))
 
@@ -285,10 +281,7 @@ def _heldout_proposals(payload: dict[str, Any]) -> list[dict[str, Any]]:
 
 
 def _source_links() -> dict[str, str]:
-    links: dict[str, str] = {}
-    if SELF_GROUND_E004_FORENSICS.exists():
-        links["self_ground_e004_forensics"] = str(SELF_GROUND_E004_FORENSICS)
-    return links
+    return {}
 
 
 def _dedupe(values: list[str]) -> list[str]:

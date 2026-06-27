@@ -217,7 +217,7 @@ def test_mechanistic_unit_registry_accepts_and_rejects_operations() -> None:
 
 def test_space_check_cli_writes_report(tmp_path: Path, monkeypatch) -> None:
     init_git_repo(tmp_path)
-    ProjectManager.init(tmp_path, name="self-ground")
+    ProjectManager.init(tmp_path, name="mwb-demo")
     monkeypatch.chdir(tmp_path)
     fixture = tmp_path / "space_check.json"
     fixture.write_text(
@@ -258,7 +258,7 @@ def test_doctor_repairs_rebuildable_sqlite_schema_drift(tmp_path: Path) -> None:
     from mwb.doctor import run_doctor
 
     init_git_repo(tmp_path)
-    ProjectManager.init(tmp_path, name="self-ground")
+    ProjectManager.init(tmp_path, name="mwb-demo")
     sqlite_path = tmp_path / ".mechanism" / "workbench.sqlite"
     with sqlite3.connect(sqlite_path) as conn:
         conn.execute("drop table space_checks")

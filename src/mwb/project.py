@@ -100,7 +100,7 @@ def read_project_config(project_toml: Path) -> dict:
 
 class ProjectManager:
     @staticmethod
-    def init(root: Path | None = None, *, name: str = "self-ground") -> Project:
+    def init(root: Path | None = None, *, name: str = "mwb-demo") -> Project:
         resolved_root = (root or Path.cwd()).resolve()
         repo_root = discover_git_root(resolved_root) or resolved_root
         mechanism = repo_root / MECHANISM_DIR
@@ -183,7 +183,7 @@ class ProjectManager:
         raise FileNotFoundError("no .mechanism/project.toml found")
 
     @staticmethod
-    def discover_or_create(start: Path | None = None, *, name: str = "self-ground") -> Project:
+    def discover_or_create(start: Path | None = None, *, name: str = "mwb-demo") -> Project:
         try:
             return ProjectManager.discover(start)
         except FileNotFoundError:

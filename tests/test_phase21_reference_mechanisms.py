@@ -26,7 +26,7 @@ def task_by_id(report: object, task_id: str) -> dict:
 
 def test_toy_known_mechanism_classification_recovers_planted_unit(tmp_path: Path) -> None:
     init_git_repo(tmp_path)
-    project = ProjectManager.init(tmp_path, name="self-ground")
+    project = ProjectManager.init(tmp_path, name="mwb-demo")
 
     report = ReferenceBenchmarkService(project).run_suite("toy")
 
@@ -41,7 +41,7 @@ def test_toy_known_mechanism_classification_recovers_planted_unit(tmp_path: Path
 
 def test_tempting_false_positive_confound_is_blocked(tmp_path: Path) -> None:
     init_git_repo(tmp_path)
-    project = ProjectManager.init(tmp_path, name="self-ground")
+    project = ProjectManager.init(tmp_path, name="mwb-demo")
 
     report = ReferenceBenchmarkService(project).run_suite("toy")
 
@@ -55,7 +55,7 @@ def test_tempting_false_positive_confound_is_blocked(tmp_path: Path) -> None:
 
 def test_synthetic_sae_split_and_absorption_are_detected(tmp_path: Path) -> None:
     init_git_repo(tmp_path)
-    project = ProjectManager.init(tmp_path, name="self-ground")
+    project = ProjectManager.init(tmp_path, name="mwb-demo")
 
     report = ReferenceBenchmarkService(project).run_suite("toy")
 
@@ -77,7 +77,7 @@ def test_framework_benchmark_cli_writes_report_and_sqlite_rows(
 ) -> None:
     init_git_repo(tmp_path)
     monkeypatch.chdir(tmp_path)
-    project = ProjectManager.init(tmp_path, name="self-ground")
+    project = ProjectManager.init(tmp_path, name="mwb-demo")
     runner = CliRunner()
 
     result = runner.invoke(app, ["benchmark", "framework"])

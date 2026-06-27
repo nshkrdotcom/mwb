@@ -107,7 +107,7 @@ def test_resample_ablation_writes_receipts_and_metrics(tmp_path: Path) -> None:
     from mwb.causal_verification import CausalVerificationService
 
     init_git_repo(tmp_path)
-    project = ProjectManager.init(tmp_path, name="self-ground")
+    project = ProjectManager.init(tmp_path, name="mwb-demo")
     service = CausalVerificationService(project)
 
     run = service.verify_payload(
@@ -139,7 +139,7 @@ def test_noising_and_denoising_have_distinct_receipts(tmp_path: Path) -> None:
     from mwb.causal_verification import CausalVerificationService
 
     init_git_repo(tmp_path)
-    project = ProjectManager.init(tmp_path, name="self-ground")
+    project = ProjectManager.init(tmp_path, name="mwb-demo")
     run = CausalVerificationService(project).verify_payload(
         base_hypothesis([operation("noising"), operation("denoising")]),
         prediction_lock=None,
@@ -163,7 +163,7 @@ def test_feature_amplification_records_coefficient(tmp_path: Path) -> None:
     from mwb.causal_verification import CausalVerificationService
 
     init_git_repo(tmp_path)
-    project = ProjectManager.init(tmp_path, name="self-ground")
+    project = ProjectManager.init(tmp_path, name="mwb-demo")
     run = CausalVerificationService(project).verify_payload(
         base_hypothesis([operation("feature_amplify", coefficient=1.75)]),
         prediction_lock=None,
@@ -183,7 +183,7 @@ def test_telemetry_drift_blocks_off_manifold_intervention(tmp_path: Path) -> Non
     from mwb.causal_verification import CausalVerificationService
 
     init_git_repo(tmp_path)
-    project = ProjectManager.init(tmp_path, name="self-ground")
+    project = ProjectManager.init(tmp_path, name="mwb-demo")
     run = CausalVerificationService(project).verify_payload(
         base_hypothesis(
             [
@@ -214,7 +214,7 @@ def test_zero_ablation_has_diagnostic_claim_ceiling(tmp_path: Path) -> None:
     from mwb.causal_verification import CausalVerificationService
 
     init_git_repo(tmp_path)
-    project = ProjectManager.init(tmp_path, name="self-ground")
+    project = ProjectManager.init(tmp_path, name="mwb-demo")
     run = CausalVerificationService(project).verify_payload(
         base_hypothesis(
             [operation("zero_ablate")],
@@ -232,7 +232,7 @@ def test_zero_ablation_has_diagnostic_claim_ceiling(tmp_path: Path) -> None:
 
 def test_verify_cli_writes_causal_artifacts(tmp_path: Path, monkeypatch) -> None:
     init_git_repo(tmp_path)
-    ProjectManager.init(tmp_path, name="self-ground")
+    ProjectManager.init(tmp_path, name="mwb-demo")
     monkeypatch.chdir(tmp_path)
     hypothesis_file = tmp_path / "hypothesis.json"
     hypothesis_file.write_text(

@@ -9,7 +9,6 @@ from mwb.project import ProjectManager
 from mwb.sqlite_index import fetch_payload, rebuild_sqlite_index
 from mwb.workflows.cards import card_from_run, language_for_tier, write_card
 from mwb.workflows.draft_guard import check_draft_text
-from mwb.workflows.self_ground_ingest import validate_self_ground_artifacts
 
 
 def init_git_repo(path: Path) -> None:
@@ -63,114 +62,11 @@ def write_run(path: Path, *, status: str = "insufficient_evidence") -> None:
     )
 
 
-def write_full_e004_fixture(path: Path) -> None:
-    comparison = path / "comparison"
-    forensics = path / "forensics"
-    comparison.mkdir(parents=True)
-    forensics.mkdir()
-    row = {
-        "layer": "blocks.2.hook_resid_post",
-        "sae_release": "pythia-70m-deduped-res-sm",
-        "sae_id": "blocks.2.hook_resid_post",
-        "feature_selection_mode": "ensemble-specificity",
-        "operation": "ablate,amplify",
-        "control_suite": "multi_control",
-        "run_status": "completed",
-        "claim_status": "insufficient_evidence",
-        "valid_tasks": 69,
-        "behavioral_rows": 5520,
-        "skipped_rows": 0,
-        "baseline_pass_rate": 1.0,
-        "top_target_delta": 0.9,
-        "top_control_delta": 0.82,
-        "specificity_gap": 0.08,
-        "top_vs_control_ratio": 1.09,
-        "density_control_gap": 0.0,
-        "multi_control_min_gap": -0.01,
-        "family_min_specificity_gap": -0.04,
-        "passes_all_controls": False,
-        "limitations": "Multi-control evidence failed.",
-        "artifact_paths": "runs/e004_specificity_rescue_matrix/eval/block2",
-    }
-    (path / "capability.json").write_text(json.dumps({"cuda_available": False}) + "\n")
-    (path / "matrix_run_summary.json").write_text(
-        json.dumps(
-            {
-                "status": "completed",
-                "attempted_cells": 1,
-                "completed_cells": 1,
-                "blocked_cells": 0,
-                "layers": ["blocks.2.hook_resid_post"],
-                "feature_selection_modes": ["ensemble-specificity"],
-                "operations": ["ablate,amplify"],
-                "control_suite": "multi_control",
-            }
-        )
-        + "\n",
-        encoding="utf-8",
-    )
-    (comparison / "comparison.json").write_text(
-        json.dumps(
-            {
-                "interpretation": "current_sae_model_layer_search_insufficient",
-                "best_run": row,
-            }
-        )
-        + "\n",
-        encoding="utf-8",
-    )
-    (comparison / "matrix_summary.json").write_text(json.dumps([row]) + "\n", encoding="utf-8")
-    summary_header = ",".join(row.keys())
-    summary_line = ",".join(str(value) for value in row.values())
-    for name in [
-        "matrix_summary.csv",
-        "best_runs_by_family.csv",
-        "best_runs_by_specificity.csv",
-        "blocked_runs.csv",
-    ]:
-        (comparison / name).write_text(f"{summary_header}\n{summary_line}\n", encoding="utf-8")
-    (comparison / "claim_adjudication.md").write_text("# E004 Claim Adjudication\n")
-    for name, header, line in [
-        (
-            "control_suite_breakdown.csv",
-            "control_suite,n_rows,n_tasks,target_delta_mean,control_delta_mean,specificity_gap_mean,control_dominant_rows",
-            "multi_control,10,5,0.9,0.82,0.08,3",
-        ),
-        (
-            "family_breakdown.csv",
-            "family,n_rows,n_tasks,target_delta_mean,control_delta_mean,specificity_gap_mean,control_dominant_rows",
-            "negation_removed,10,5,0.9,0.82,0.08,3",
-        ),
-        (
-            "feature_breakdown.csv",
-            "feature_set,n_rows,n_tasks,target_delta_mean,control_delta_mean,specificity_gap_mean,control_dominant_rows",
-            "top,10,5,0.9,0.82,0.08,3",
-        ),
-        (
-            "task_outlier_table.csv",
-            "run_name,task_id,family,template_id,token_pair,feature_set_label,control_suite,target_absolute_delta,control_absolute_delta,specificity_gap",
-            "run,task,negation_removed,tpl,no/not,top,multi_control,0.9,0.82,0.08",
-        ),
-        (
-            "template_breakdown.csv",
-            "template,n_rows,n_tasks,target_delta_mean,control_delta_mean,specificity_gap_mean,control_dominant_rows",
-            "tpl,10,5,0.9,0.82,0.08,3",
-        ),
-        (
-            "token_pair_breakdown.csv",
-            "token_pair,n_rows,n_tasks,target_delta_mean,control_delta_mean,specificity_gap_mean,control_dominant_rows",
-            "no/not,10,5,0.9,0.82,0.08,3",
-        ),
-    ]:
-        (forensics / name).write_text(f"{header}\n{line}\n", encoding="utf-8")
-    (forensics / "forensics_summary.md").write_text("# Forensics\n", encoding="utf-8")
-
-
 def test_ipython_resume_cli_links_sessions_and_continues_capture(
     tmp_path: Path, monkeypatch
 ) -> None:
     init_git_repo(tmp_path)
-    ProjectManager.init(tmp_path, name="self-ground")
+    ProjectManager.init(tmp_path, name="mwb-demo")
     monkeypatch.chdir(tmp_path)
     runner = CliRunner()
     first = runner.invoke(app, ["ipython", "--execute", "obj = ctx.note('first')"])
@@ -199,7 +95,7 @@ def test_ipython_resume_cli_links_sessions_and_continues_capture(
 
 def test_ctx_record_and_note_are_captured_from_ipython(tmp_path: Path, monkeypatch) -> None:
     init_git_repo(tmp_path)
-    ProjectManager.init(tmp_path, name="self-ground")
+    ProjectManager.init(tmp_path, name="mwb-demo")
     monkeypatch.chdir(tmp_path)
     runner = CliRunner()
 
@@ -225,7 +121,7 @@ def test_sweep_dry_run_writes_full_non_claim_bearing_artifact_set(
     tmp_path: Path, monkeypatch
 ) -> None:
     init_git_repo(tmp_path)
-    ProjectManager.init(tmp_path, name="self-ground")
+    ProjectManager.init(tmp_path, name="mwb-demo")
     monkeypatch.chdir(tmp_path)
     hypothesis = tmp_path / "hypothesis.json"
     write_hypothesis(hypothesis)
@@ -291,7 +187,7 @@ def test_language_for_all_evidence_tiers_is_explicit() -> None:
 
 def test_card_writes_scientific_debt_records(tmp_path: Path) -> None:
     init_git_repo(tmp_path)
-    project = ProjectManager.init(tmp_path, name="self-ground")
+    project = ProjectManager.init(tmp_path, name="mwb-demo")
     run_dir = tmp_path / "run"
     write_run(run_dir)
 
@@ -323,22 +219,10 @@ def test_draft_guard_supports_caveated_unknown_and_missing_statuses() -> None:
     assert no_tags["status"] == "unknown_claim"
 
 
-def test_self_ground_validation_requires_comparison_and_forensics_csvs(tmp_path: Path) -> None:
-    source = tmp_path / "e004_specificity_rescue_matrix"
-    write_full_e004_fixture(source)
-
-    statuses = validate_self_ground_artifacts(source)
-
-    assert statuses["comparison/best_runs_by_family.csv"]["status"] == "present"
-    assert statuses["comparison/best_runs_by_specificity.csv"]["row_count"] == 1
-    assert statuses["forensics/control_suite_breakdown.csv"]["status"] == "present"
-    assert statuses["forensics/task_outlier_table.csv"]["row_count"] == 1
-
-
 def test_sqlite_rebuild_restores_indexed_files(tmp_path: Path, monkeypatch) -> None:
     init_git_repo(tmp_path)
     monkeypatch.chdir(tmp_path)
-    project = ProjectManager.init(tmp_path, name="self-ground")
+    project = ProjectManager.init(tmp_path, name="mwb-demo")
     runner = CliRunner()
     result = runner.invoke(app, ["ipython", "--execute", "obj = ctx.note('rebuild')"])
     rebuilt = tmp_path / "rebuilt.sqlite"

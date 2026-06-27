@@ -24,11 +24,11 @@ def init_git_repo(path: Path) -> None:
 def test_negation_bundle_loads_as_first_class_objects(tmp_path: Path, monkeypatch) -> None:
     init_git_repo(tmp_path)
     monkeypatch.chdir(tmp_path)
-    project = ProjectManager.init(tmp_path, name="self-ground")
+    project = ProjectManager.init(tmp_path, name="mwb-demo")
     session = SessionManager.start(project, surface="test")
     ctx = RunContext(project=project, session=session)
 
-    bundle = ctx.domains.negation.load("phase3_calibrated")
+    bundle = ctx.domains.negation.load("demo_calibrated")
 
     assert bundle.wb_type == "DomainBundle"
     assert bundle.targets.wb_type == "ExampleBundle"
@@ -58,12 +58,12 @@ def test_demo_negation_dry_run_validates_real_bundle(tmp_path: Path, monkeypatch
 def test_ipython_captures_loaded_bundle(tmp_path: Path, monkeypatch) -> None:
     init_git_repo(tmp_path)
     monkeypatch.chdir(tmp_path)
-    ProjectManager.init(tmp_path, name="self-ground")
+    ProjectManager.init(tmp_path, name="mwb-demo")
     runner = CliRunner()
 
     result = runner.invoke(
         app,
-        ["ipython", "--execute", "bundle = ctx.domains.negation.load('phase3_calibrated')"],
+        ["ipython", "--execute", "bundle = ctx.domains.negation.load('demo_calibrated')"],
     )
 
     assert result.exit_code == 0, result.output
@@ -81,13 +81,13 @@ def test_ipython_captures_loaded_bundle(tmp_path: Path, monkeypatch) -> None:
 def test_real_ctx_model_sae_capture_and_rank(tmp_path: Path, monkeypatch) -> None:
     init_git_repo(tmp_path)
     monkeypatch.chdir(tmp_path)
-    project = ProjectManager.init(tmp_path, name="self-ground")
+    project = ProjectManager.init(tmp_path, name="mwb-demo")
     session = SessionManager.start(project, surface="test")
     ctx = RunContext(project=project, session=session)
 
     model = ctx.models.load_tl("EleutherAI/pythia-70m-deduped", device="cpu")
     sae = ctx.saes.load("pythia-70m-deduped-res-sm", hook="blocks.2.hook_resid_post")
-    bundle = ctx.domains.negation.load("phase3_calibrated")
+    bundle = ctx.domains.negation.load("demo_calibrated")
     acts = ctx.capture(model, bundle).at("blocks.2.hook_resid_post")
     features = ctx.features.rank(sae, acts, contrast="target_vs_controls", top_k=3)
 

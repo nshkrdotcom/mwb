@@ -144,7 +144,7 @@ def test_default_strict_profile_adds_zero_ablation_claim_ceiling(tmp_path: Path)
     from mwb.causal_verification import CausalVerificationService
 
     init_git_repo(tmp_path)
-    project = ProjectManager.init(tmp_path, name="self-ground")
+    project = ProjectManager.init(tmp_path, name="mwb-demo")
 
     run = CausalVerificationService(project).verify_payload(
         base_hypothesis([operation("zero_ablate")]),
@@ -163,7 +163,7 @@ def test_strict_profile_requires_noising_and_denoising_for_candidate_claims(tmp_
     from mwb.causal_verification import CausalVerificationService
 
     init_git_repo(tmp_path)
-    project = ProjectManager.init(tmp_path, name="self-ground")
+    project = ProjectManager.init(tmp_path, name="mwb-demo")
     service = CausalVerificationService(project)
 
     missing_denoising = service.verify_payload(
@@ -239,7 +239,7 @@ def test_policy_applies_to_cards_and_draft_guard(tmp_path: Path) -> None:
 def test_policy_profile_cli_writes_report_and_restores_sqlite(tmp_path: Path, monkeypatch) -> None:
     init_git_repo(tmp_path)
     monkeypatch.chdir(tmp_path)
-    project = ProjectManager.init(tmp_path, name="self-ground")
+    project = ProjectManager.init(tmp_path, name="mwb-demo")
     runner = CliRunner()
 
     result = runner.invoke(app, ["policy", "check", "--profile", "strict"])

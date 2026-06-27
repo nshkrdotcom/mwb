@@ -28,7 +28,7 @@ def init_git_repo(path: Path) -> None:
 def test_real_adapter_weights_compile_static_projection(tmp_path: Path, monkeypatch) -> None:
     init_git_repo(tmp_path)
     monkeypatch.chdir(tmp_path)
-    project = ProjectManager.init(tmp_path, name="self-ground")
+    project = ProjectManager.init(tmp_path, name="mwb-demo")
     session = SessionManager.start(project, surface="test")
     ctx = RunContext(project=project, session=session)
 

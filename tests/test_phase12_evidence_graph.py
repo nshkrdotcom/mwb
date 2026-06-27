@@ -267,7 +267,7 @@ def test_graph_rebuild_persists_jsonl_and_rebuildable_sqlite(
     from mwb.sqlite_index import fetch_payload, rebuild_sqlite_index
 
     init_git_repo(tmp_path)
-    project = ProjectManager.init(tmp_path, name="self-ground")
+    project = ProjectManager.init(tmp_path, name="mwb-demo")
     refs = write_phase12_fixture(project)
     monkeypatch.chdir(tmp_path)
 
@@ -299,7 +299,7 @@ def test_graph_rebuild_persists_jsonl_and_rebuildable_sqlite(
 
 def test_graph_query_cli_answers_phase12_questions(tmp_path: Path, monkeypatch) -> None:
     init_git_repo(tmp_path)
-    project = ProjectManager.init(tmp_path, name="self-ground")
+    project = ProjectManager.init(tmp_path, name="mwb-demo")
     refs = write_phase12_fixture(project)
     monkeypatch.chdir(tmp_path)
     runner = CliRunner()

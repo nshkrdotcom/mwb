@@ -32,7 +32,7 @@ def test_ipython_execute_injects_ctx_and_captures_ctx_object(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     init_git_repo(tmp_path)
-    ProjectManager.init(tmp_path, name="self-ground")
+    ProjectManager.init(tmp_path, name="mwb-demo")
     monkeypatch.chdir(tmp_path)
     runner = CliRunner()
 
@@ -64,7 +64,7 @@ def test_ipython_execute_records_failed_cell(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     init_git_repo(tmp_path)
-    ProjectManager.init(tmp_path, name="self-ground")
+    ProjectManager.init(tmp_path, name="mwb-demo")
     monkeypatch.chdir(tmp_path)
     runner = CliRunner()
 
@@ -83,7 +83,7 @@ def test_ipython_execute_captures_direct_protocol_object(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     init_git_repo(tmp_path)
-    ProjectManager.init(tmp_path, name="self-ground")
+    ProjectManager.init(tmp_path, name="mwb-demo")
     monkeypatch.chdir(tmp_path)
     runner = CliRunner()
 
@@ -110,7 +110,7 @@ def test_ipython_execute_records_alias_and_deleted_binding(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     init_git_repo(tmp_path)
-    ProjectManager.init(tmp_path, name="self-ground")
+    ProjectManager.init(tmp_path, name="mwb-demo")
     monkeypatch.chdir(tmp_path)
     runner = CliRunner()
 
@@ -137,7 +137,7 @@ def test_inspect_session_latest_reports_session(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     init_git_repo(tmp_path)
-    ProjectManager.init(tmp_path, name="self-ground")
+    ProjectManager.init(tmp_path, name="mwb-demo")
     monkeypatch.chdir(tmp_path)
     runner = CliRunner()
 

@@ -1,6 +1,6 @@
-name: phase3_calibrated
+name: demo_calibrated
 domain: negation
-source: built_in_self_ground_phase3_calibrated
+source: built_in_mwb_demo_calibrated
 examples:
   - id: tgt_001
     prompt: "The answer is not yes."

@@ -61,7 +61,7 @@ def test_draft_guard_blocks_overclaiming() -> None:
 def test_card_and_draft_check_cli(tmp_path: Path, monkeypatch) -> None:
     init_git_repo(tmp_path)
     monkeypatch.chdir(tmp_path)
-    ProjectManager.init(tmp_path, name="self-ground")
+    ProjectManager.init(tmp_path, name="mwb-demo")
     run_dir = tmp_path / "run"
     write_control_leaky_run(run_dir)
     draft = tmp_path / "draft.md"

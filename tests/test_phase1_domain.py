@@ -76,7 +76,7 @@ def test_bundles_preserve_control_identity() -> None:
         name="phase3_targets",
         domain="negation",
         examples=[{"prompt": "The answer is not yes", "target": "no"}],
-        source="research/bundles/negation_phase3_calibrated.yaml",
+        source="research/bundles/negation_demo_calibrated.yaml",
     )
     controls = ControlBundle(
         wb_ref="bundle_controls",
@@ -85,7 +85,7 @@ def test_bundles_preserve_control_identity() -> None:
         control_families={
             "negation_removed": [{"prompt": "The answer is yes", "target": "yes"}]
         },
-        source="research/bundles/negation_phase3_calibrated.yaml",
+        source="research/bundles/negation_demo_calibrated.yaml",
         parents=[examples.wb_ref],
     )
 
@@ -95,7 +95,7 @@ def test_bundles_preserve_control_identity() -> None:
 
 def test_artifact_registry_hashes_file_and_indexes_sqlite(tmp_path: Path) -> None:
     init_git_repo(tmp_path)
-    project = ProjectManager.init(tmp_path, name="self-ground")
+    project = ProjectManager.init(tmp_path, name="mwb-demo")
     source = tmp_path / "feature_rankings.csv"
     source.write_text("feature,score\n1,0.7\n")
 
@@ -115,7 +115,7 @@ def test_artifact_registry_hashes_file_and_indexes_sqlite(tmp_path: Path) -> Non
 
 def test_sqlite_payload_roundtrip(tmp_path: Path) -> None:
     init_git_repo(tmp_path)
-    project = ProjectManager.init(tmp_path, name="self-ground")
+    project = ProjectManager.init(tmp_path, name="mwb-demo")
     space = TensorSpace(
         wb_ref="space_resid_2",
         model_ref="model_pythia",

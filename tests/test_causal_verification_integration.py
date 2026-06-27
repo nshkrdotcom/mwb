@@ -29,7 +29,7 @@ def test_real_pythia_sae_resample_ablation_writes_receipt(tmp_path: Path, monkey
 
     init_git_repo(tmp_path)
     monkeypatch.chdir(tmp_path)
-    project = ProjectManager.init(tmp_path, name="self-ground")
+    project = ProjectManager.init(tmp_path, name="mwb-demo")
     session = SessionManager.start(project, surface="test")
     ctx = RunContext(project=project, session=session)
     model = ctx.models.load_tl("EleutherAI/pythia-70m-deduped", device="cpu")

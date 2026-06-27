@@ -23,14 +23,14 @@ def init_git_repo(path: Path) -> None:
 
 def make_context(tmp_path: Path) -> RunContext:
     init_git_repo(tmp_path)
-    project = ProjectManager.init(tmp_path, name="self-ground")
+    project = ProjectManager.init(tmp_path, name="mwb-demo")
     session = SessionManager.start(project, surface="test")
     return RunContext(project=project, session=session)
 
 
 def test_hypothesis_create_and_prediction_lock_are_hash_stable(tmp_path: Path) -> None:
     ctx = make_context(tmp_path)
-    bundle = ctx.domains.negation.load("phase3_calibrated")
+    bundle = ctx.domains.negation.load("demo_calibrated")
     h = ctx.hypotheses.create(
         title="candidate negation feature",
         units=["unit_1"],
@@ -116,7 +116,7 @@ def test_verify_requires_prediction_lock_for_claim_bearing() -> None:
 def test_preflight_and_verify_cli(tmp_path: Path, monkeypatch) -> None:
     init_git_repo(tmp_path)
     monkeypatch.chdir(tmp_path)
-    ProjectManager.init(tmp_path, name="self-ground")
+    ProjectManager.init(tmp_path, name="mwb-demo")
     hypothesis_file = tmp_path / "hypothesis.json"
     hypothesis_file.write_text(
         json.dumps(

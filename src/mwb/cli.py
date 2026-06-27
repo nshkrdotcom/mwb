@@ -13,6 +13,7 @@ from rich.console import Console
 from mwb.adapters.neuronpedia import NeuronpediaAdapter
 from mwb.adapters.nnsight import NNsightAdapter
 from mwb.adapters.pyvene import PyVeneAdapter
+from mwb.adapters.registry import default_registry, register_adapter_cli_commands
 from mwb.adapters.saelens import SAELensAdapter
 from mwb.adapters.transformer_lens import TransformerLensAdapter
 from mwb.bundle_audit import BundleAuditService
@@ -35,11 +36,11 @@ from mwb.static_compiler import StaticCompiler
 from mwb.workflows.cards import card_from_run, write_card
 from mwb.workflows.diagnosis import DiagnosisService
 from mwb.workflows.draft_guard import check_draft_text, load_claim_cards
+from mwb.workflows.ingest import ingest_external_run
 from mwb.workflows.io import load_json_payload
 from mwb.workflows.next_probe import build_next_probe, load_next_probe_payload, write_next_probe
 from mwb.workflows.preflight import run_preflight
 from mwb.workflows.runs import resolve_run_path
-from mwb.workflows.self_ground_ingest import ingest_self_ground_run
 from mwb.workflows.sweep import parse_axes, write_sweep_run
 
 app = typer.Typer(no_args_is_help=True, help="Mechanistic Workbench local CLI.")
@@ -59,6 +60,7 @@ claim_app = typer.Typer(help="Check paper-facing claim grammar.")
 policy_app = typer.Typer(help="Evaluate project research-taste policy profiles.")
 app.add_typer(inspect_app, name="inspect")
 app.add_typer(adapter_app, name="adapter")
+app.add_typer(adapter_app, name="adapters")
 app.add_typer(demo_app, name="demo")
 app.add_typer(ingest_app, name="ingest")
 app.add_typer(graph_app, name="graph")
@@ -90,7 +92,8 @@ AxisOption = Annotated[
     list[str] | None,
     typer.Option("--axis", help="Sweep axis in name=value[,value...] form."),
 ]
-SelfGroundPathArgument = Annotated[Path, typer.Argument(help="SELF-GROUND run directory.")]
+AdapterIdArgument = Annotated[str, typer.Argument(help="Registered adapter id.")]
+ExternalSourceArgument = Annotated[Path, typer.Argument(help="External source directory.")]
 OutputPathOption = Annotated[
     Path | None,
     typer.Option("--output", help="Output SQLite path for rebuilt index."),
@@ -131,7 +134,7 @@ SpaceCheckFileArgument = Annotated[Path, typer.Argument(help="Space check JSON f
 CompileHypothesisFileArgument = Annotated[Path, typer.Argument(help="Hypothesis JSON file.")]
 BundleNameArgument = Annotated[
     str,
-    typer.Argument(help="Built-in bundle name, e.g. negation_phase3_calibrated."),
+    typer.Argument(help="Built-in bundle name, e.g. negation_demo_calibrated."),
 ]
 BenchmarkSuiteOption = Annotated[str, typer.Option("--suite", help="Reference suite name.")]
 PolicyProfileOption = Annotated[
@@ -146,7 +149,7 @@ MaterializeProbeOption = Annotated[
 
 @app.command()
 def init(
-    name: NameOption = "self-ground",
+    name: NameOption = "mwb-demo",
     root: RootOption = DEFAULT_ROOT,
 ) -> None:
     """Initialize or reuse a local .mechanism workspace."""
@@ -303,7 +306,7 @@ def bundle_audit(name: BundleNameArgument) -> None:
 
 @bundle_app.command("rebalance")
 def bundle_rebalance(
-    name: BundleNameArgument = "negation_phase3_calibrated",
+    name: BundleNameArgument = "negation_demo_calibrated",
     dry_run: DryRunOption = False,
 ) -> None:
     """Generate heldout and control-family bundle improvement proposals."""
@@ -332,6 +335,49 @@ def benchmark_framework(suite: BenchmarkSuiteOption = "toy") -> None:
     console.print_json(json.dumps(report.model_dump(mode="json")))
     if report.status != "pass":
         raise typer.Exit(code=1)
+
+
+@adapter_app.command("list")
+def adapter_list(
+    json_output: Annotated[
+        bool, typer.Option("--json", help="Emit registered adapters as JSON.")
+    ] = False,
+) -> None:
+    """List registered workbench adapters."""
+    reports = [
+        report.model_dump(mode="json")
+        for report in default_registry().list_capabilities()
+    ]
+    if json_output:
+        console.print_json(json.dumps({"adapters": reports}))
+        return
+    for report in reports:
+        console.print(
+            f"{report['adapter_id']}: {report['display_name']} "
+            f"({', '.join(report['modes'])})"
+        )
+
+
+@adapter_app.command("inspect")
+def adapter_inspect(
+    adapter_id: AdapterIdArgument,
+    json_output: Annotated[
+        bool, typer.Option("--json", help="Emit adapter details as JSON.")
+    ] = False,
+) -> None:
+    """Inspect one registered adapter."""
+    try:
+        payload = default_registry().inspect(adapter_id)
+    except KeyError as exc:
+        raise typer.BadParameter(str(exc)) from exc
+    if json_output:
+        console.print_json(json.dumps(payload))
+        return
+    console.print(f"adapter: {payload['adapter_id']}")
+    console.print(f"display: {payload['display_name']}")
+    console.print(f"status: {payload['status']}")
+    console.print(f"modes: {', '.join(payload['modes'])}")
+    console.print(f"claim-bearing: {payload['claim_bearing']}")
 
 
 @claim_app.command("check")
@@ -522,20 +568,23 @@ def draft_check(draft_path: Annotated[Path, typer.Argument(help="Draft Markdown 
         raise typer.Exit(code=1)
 
 
-@ingest_app.command("self-ground")
-def ingest_self_ground(source: SelfGroundPathArgument) -> None:
-    """Ingest a SELF-GROUND E004 artifact set into .mechanism/runs."""
+@ingest_app.command("external")
+def ingest_external(adapter_id: AdapterIdArgument, source: ExternalSourceArgument) -> None:
+    """Ingest an external run through a registered adapter."""
     project = ProjectManager.discover_or_create()
-    run_dir = ingest_self_ground_run(source, project=project)
-    manifest = json.loads((run_dir / "run_manifest.json").read_text(encoding="utf-8"))
-    blocker_report = json.loads((run_dir / "blocker_report.json").read_text(encoding="utf-8"))
+    try:
+        result = ingest_external_run(adapter_id, source, project=project)
+    except (KeyError, ValueError, FileNotFoundError) as exc:
+        console.print(f"error: {exc}")
+        raise typer.Exit(code=1) from exc
     console.print_json(
         json.dumps(
             {
-                "run_ref": manifest["run_ref"],
-                "status": manifest["status"],
-                "run_dir": str(run_dir),
-                "primary_blocker": blocker_report.get("primary_blocker"),
+                "adapter_id": result.adapter_id,
+                "run_ref": result.run_ref,
+                "status": result.status,
+                "run_dir": str(result.run_dir),
+                "primary_blocker": result.primary_blocker,
             }
         )
     )
@@ -701,13 +750,28 @@ def demo_negation(
     device: DeviceOption = "cpu",
     dry_run: DryRunOption = False,
 ) -> None:
-    """Run or validate the built-in SELF-GROUND negation demo."""
+    """Run or validate the built-in workbench negation demo."""
     project = ProjectManager.discover_or_create()
     session = SessionManager.start(project, surface="cli", mode="scratch")
     ctx = RunContext(project=project, session=session)
     try:
-        bundle = ctx.domains.negation.load("phase3_calibrated")
+        bundle = ctx.domains.negation.load("demo_calibrated")
         if dry_run:
+            run_dir, run_output = write_sweep_run(
+                project=project,
+                hypothesis_payload={"wb_ref": "hyp_demo_negation"},
+                config={
+                    "axis_source": "demo",
+                    "axes": {},
+                    "inherited_axes": {},
+                    "matrix_semantics": "single_demo_check",
+                    "matrix_size": 1,
+                },
+                dry_run=True,
+            )
+            plan = build_next_probe(load_next_probe_payload(run_dir))
+            write_next_probe(run_dir, plan)
+            write_card(run_dir, card_from_run(run_dir), mechanism_dir=project.mechanism_dir)
             payload = {
                 "status": "dry_run",
                 "model": model,
@@ -716,6 +780,9 @@ def demo_negation(
                 "control_bundle_ref": bundle.controls.wb_ref,
                 "n_examples": len(bundle.targets.examples),
                 "control_families": sorted(bundle.controls.control_families),
+                "run_ref": run_output["run_ref"],
+                "run_dir": run_output["run_dir"],
+                "claim_bearing": False,
             }
             console.print_json(json.dumps(payload))
             return
@@ -730,6 +797,9 @@ def demo_negation(
         console.print_json(json.dumps(payload))
     finally:
         session.close()
+
+
+register_adapter_cli_commands(ingest_app)
 
 
 if __name__ == "__main__":

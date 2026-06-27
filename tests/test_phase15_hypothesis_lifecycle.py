@@ -121,7 +121,7 @@ def test_hypothesis_transition_cli_validates_order_and_claimable_approval(
     tmp_path: Path, monkeypatch
 ) -> None:
     init_git_repo(tmp_path)
-    project = ProjectManager.init(tmp_path, name="self-ground")
+    project = ProjectManager.init(tmp_path, name="mwb-demo")
     write_hypothesis(project)
     monkeypatch.chdir(tmp_path)
     runner = CliRunner()
@@ -182,7 +182,7 @@ def test_hypothesis_explain_writes_live_alternatives_from_blockers(
     tmp_path: Path, monkeypatch
 ) -> None:
     init_git_repo(tmp_path)
-    project = ProjectManager.init(tmp_path, name="self-ground")
+    project = ProjectManager.init(tmp_path, name="mwb-demo")
     write_hypothesis(project)
     run_dir = write_run_with_blockers(project)
     monkeypatch.chdir(tmp_path)
@@ -208,7 +208,7 @@ def test_hypothesis_lifecycle_rebuild_restores_state_and_alternatives(
     from mwb.sqlite_index import fetch_payload, rebuild_sqlite_index
 
     init_git_repo(tmp_path)
-    project = ProjectManager.init(tmp_path, name="self-ground")
+    project = ProjectManager.init(tmp_path, name="mwb-demo")
     write_hypothesis(project)
     run_dir = write_run_with_blockers(project)
     monkeypatch.chdir(tmp_path)

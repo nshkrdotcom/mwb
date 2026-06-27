@@ -23,8 +23,8 @@ def init_git_repo(path: Path) -> None:
 def test_project_init_creates_layout_and_is_idempotent(tmp_path: Path) -> None:
     init_git_repo(tmp_path)
 
-    project = ProjectManager.init(tmp_path, name="self-ground")
-    second = ProjectManager.init(tmp_path, name="self-ground")
+    project = ProjectManager.init(tmp_path, name="mwb-demo")
+    second = ProjectManager.init(tmp_path, name="mwb-demo")
 
     assert project.root == second.root == tmp_path
     mechanism = tmp_path / ".mechanism"
@@ -47,27 +47,27 @@ def test_project_init_creates_layout_and_is_idempotent(tmp_path: Path) -> None:
         assert (mechanism / relative).exists(), relative
 
     project_toml = (mechanism / "project.toml").read_text()
-    assert 'name = "self-ground"' in project_toml
+    assert 'name = "mwb-demo"' in project_toml
     assert 'schema_version = 1' in project_toml
 
 
 def test_project_init_appends_project_created_event_once(tmp_path: Path) -> None:
     init_git_repo(tmp_path)
 
-    ProjectManager.init(tmp_path, name="self-ground")
-    ProjectManager.init(tmp_path, name="self-ground")
+    ProjectManager.init(tmp_path, name="mwb-demo")
+    ProjectManager.init(tmp_path, name="mwb-demo")
 
     events = [
         json.loads(line)
         for line in (tmp_path / ".mechanism" / "events.jsonl").read_text().splitlines()
     ]
     assert [event["event_type"] for event in events] == ["project_created"]
-    assert events[0]["payload"]["project_name"] == "self-ground"
+    assert events[0]["payload"]["project_name"] == "mwb-demo"
 
 
 def test_sqlite_schema_is_initialized(tmp_path: Path) -> None:
     init_git_repo(tmp_path)
-    ProjectManager.init(tmp_path, name="self-ground")
+    ProjectManager.init(tmp_path, name="mwb-demo")
 
     sqlite_path = tmp_path / ".mechanism" / "workbench.sqlite"
     with sqlite3.connect(sqlite_path) as conn:
@@ -103,10 +103,10 @@ def test_cli_init_and_doctor_validate_project(
     monkeypatch.chdir(tmp_path)
     runner = CliRunner()
 
-    init_result = runner.invoke(app, ["init", "--name", "self-ground"])
+    init_result = runner.invoke(app, ["init", "--name", "mwb-demo"])
     doctor_result = runner.invoke(app, ["doctor"])
 
     assert init_result.exit_code == 0, init_result.output
     assert doctor_result.exit_code == 0, doctor_result.output
-    assert "project: self-ground" in doctor_result.output
+    assert "project: mwb-demo" in doctor_result.output
     assert "status: ok" in doctor_result.output

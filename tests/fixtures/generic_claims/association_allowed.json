@@ -1,0 +1,12 @@
+{
+  "claim_ref": "claim_demo_association",
+  "claim_text": "A candidate feature family is associated with the inspected contrast set.",
+  "claim_type": "association",
+  "evidence": {
+    "mechanism_card": {
+      "blockers": [],
+      "evidence_tier": "association",
+      "scientific_debt": []
+    }
+  }
+}

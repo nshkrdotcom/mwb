@@ -97,7 +97,7 @@ def write_diagnostic_run(project: Project, run_ref: str = "run_diag") -> Path:
 
 def test_diagnosis_tree_from_blocker_report_preserves_provenance(tmp_path: Path) -> None:
     init_git_repo(tmp_path)
-    project = ProjectManager.init(tmp_path, name="self-ground")
+    project = ProjectManager.init(tmp_path, name="mwb-demo")
     run_dir = write_diagnostic_run(project)
 
     service = DiagnosisService(project)
@@ -123,7 +123,7 @@ def test_probe_template_registry_materializes_deterministic_supported_probe(
     tmp_path: Path,
 ) -> None:
     init_git_repo(tmp_path)
-    project = ProjectManager.init(tmp_path, name="self-ground")
+    project = ProjectManager.init(tmp_path, name="mwb-demo")
     run_dir = write_diagnostic_run(project)
     payload = load_next_probe_payload(run_dir)
     plan = build_next_probe(payload)
@@ -156,7 +156,7 @@ def test_next_probe_materialize_and_run_probe_cli_execute_real_dry_run(
 ) -> None:
     init_git_repo(tmp_path)
     monkeypatch.chdir(tmp_path)
-    project = ProjectManager.init(tmp_path, name="self-ground")
+    project = ProjectManager.init(tmp_path, name="mwb-demo")
     run_dir = write_diagnostic_run(project)
     runner = CliRunner()
 
@@ -182,7 +182,7 @@ def test_next_probe_materialize_and_run_probe_cli_execute_real_dry_run(
 
 def test_unsupported_probe_commands_are_not_emitted_or_runnable(tmp_path: Path) -> None:
     init_git_repo(tmp_path)
-    project = ProjectManager.init(tmp_path, name="self-ground")
+    project = ProjectManager.init(tmp_path, name="mwb-demo")
     run_dir = write_diagnostic_run(project, run_ref="run_unsupported")
     blocker = json.loads((run_dir / "blocker_report.json").read_text(encoding="utf-8"))
     blocker["blockers"] = ["dictionary_interference"]
@@ -210,7 +210,7 @@ def test_artifact_incomplete_materialization_records_blocked_probe(
 ) -> None:
     init_git_repo(tmp_path)
     monkeypatch.chdir(tmp_path)
-    project = ProjectManager.init(tmp_path, name="self-ground")
+    project = ProjectManager.init(tmp_path, name="mwb-demo")
     run_dir = project.mechanism_dir / "runs" / "run_incomplete"
     run_dir.mkdir(parents=True)
     (run_dir / "run_manifest.json").write_text(
@@ -239,7 +239,7 @@ def test_artifact_incomplete_materialization_records_blocked_probe(
 
 def test_diagnosis_and_materialized_probe_restore_to_sqlite(tmp_path: Path) -> None:
     init_git_repo(tmp_path)
-    project = ProjectManager.init(tmp_path, name="self-ground")
+    project = ProjectManager.init(tmp_path, name="mwb-demo")
     run_dir = write_diagnostic_run(project)
     service = DiagnosisService(project)
     tree = service.write_diagnosis(run_dir, service.diagnose_run_dir(run_dir))
