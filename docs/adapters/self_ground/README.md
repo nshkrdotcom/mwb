@@ -9,6 +9,7 @@ surface, claims, graph, cards, ledgers, or default examples.
 
 ```bash
 uv run mwb adapters inspect self-ground --json
+uv run mwb adapters can-ingest self-ground /path/to/self-ground/runs/<run-id> --json
 uv run mwb ingest self-ground /path/to/self-ground/runs/<run-id>
 uv run mwb ingest external self-ground /path/to/self-ground/runs/<run-id>
 ```

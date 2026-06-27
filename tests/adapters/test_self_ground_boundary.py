@@ -29,11 +29,16 @@ ALLOWED_PREFIXES = (
     "docs/archive/",
 )
 
-ALLOWED_FILES = {
-    "README.md": "public optional adapter section",
-    "docs/USAGE.md": "usage optional adapter section",
-    "src/mwb/adapters/__init__.py": "adapter package export",
-    "src/mwb/adapters/registry.py": "registered adapter loading boundary",
+ALLOWED_LINE_PATTERNS = {
+    "src/mwb/adapters/registry.py": [
+        "from mwb.adapters.self_ground.ingest import SelfGroundIngestAdapter",
+        "from mwb.adapters.self_ground.commands import register_commands",
+    ],
+}
+
+ALLOWED_SECTIONS = {
+    "README.md": ["## Optional Dogfood Adapter: SELF-GROUND"],
+    "docs/USAGE.md": ["## Optional Dogfood Adapter"],
 }
 
 SCAN_ROOTS = ["README.md", "docs", "src", "tests", "pyproject.toml"]
@@ -43,9 +48,12 @@ def test_self_ground_terms_do_not_appear_in_generic_surfaces() -> None:
     leaks: list[str] = []
     for path in _scan_files():
         relative = path.relative_to(ROOT).as_posix()
-        if _is_allowed(relative):
+        if _is_allowed_path(relative):
             continue
-        for line_number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+        text = _strip_allowed_sections(relative, path.read_text(encoding="utf-8"))
+        for line_number, line in enumerate(text.splitlines(), 1):
+            if _is_allowed_line(relative, line):
+                continue
             if FORBIDDEN.search(line):
                 leaks.append(f"{relative}:{line_number}: {line.strip()}")
 
@@ -59,6 +67,8 @@ def test_readme_and_usage_frame_self_ground_as_optional_adapter_only() -> None:
     assert "## Optional Dogfood Adapter: SELF-GROUND" in readme
     assert "MWB does not depend on SELF-GROUND" in readme
     assert "SELF-GROUND is available only as an optional dogfood adapter" in usage
+    assert "SELF-GROUND" not in _strip_allowed_sections("README.md", readme)
+    assert "SELF-GROUND" not in _strip_allowed_sections("docs/USAGE.md", usage)
 
 
 def _scan_files() -> list[Path]:
@@ -76,7 +86,27 @@ def _scan_files() -> list[Path]:
     return sorted(files)
 
 
-def _is_allowed(relative: str) -> bool:
-    if relative in ALLOWED_FILES:
-        return True
+def _is_allowed_path(relative: str) -> bool:
     return relative.startswith(ALLOWED_PREFIXES)
+
+
+def _is_allowed_line(relative: str, line: str) -> bool:
+    return line.strip() in ALLOWED_LINE_PATTERNS.get(relative, [])
+
+
+def _strip_allowed_sections(relative: str, text: str) -> str:
+    allowed_headings = ALLOWED_SECTIONS.get(relative, [])
+    if not allowed_headings:
+        return text
+    lines = text.splitlines()
+    output: list[str] = []
+    skipping = False
+    for line in lines:
+        if any(line.strip() == heading for heading in allowed_headings):
+            skipping = True
+            continue
+        if skipping and line.startswith("## "):
+            skipping = False
+        if not skipping:
+            output.append(line)
+    return "\n".join(output)

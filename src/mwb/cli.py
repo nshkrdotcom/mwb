@@ -346,7 +346,7 @@ def adapter_list(
     """List registered workbench adapters."""
     reports = [
         report.model_dump(mode="json")
-        for report in default_registry().list_capabilities()
+        for report in default_registry().list_metadata()
     ]
     if json_output:
         console.print_json(json.dumps({"adapters": reports}))
@@ -367,9 +367,10 @@ def adapter_inspect(
 ) -> None:
     """Inspect one registered adapter."""
     try:
-        payload = default_registry().inspect(adapter_id)
+        metadata = default_registry().inspect(adapter_id)
     except KeyError as exc:
         raise typer.BadParameter(str(exc)) from exc
+    payload = metadata.model_dump(mode="json")
     if json_output:
         console.print_json(json.dumps(payload))
         return
@@ -378,6 +379,31 @@ def adapter_inspect(
     console.print(f"status: {payload['status']}")
     console.print(f"modes: {', '.join(payload['modes'])}")
     console.print(f"claim-bearing: {payload['claim_bearing']}")
+
+
+@adapter_app.command("can-ingest")
+def adapter_can_ingest(
+    adapter_id: AdapterIdArgument,
+    source: ExternalSourceArgument,
+    json_output: Annotated[
+        bool, typer.Option("--json", help="Emit source capability report as JSON.")
+    ] = False,
+) -> None:
+    """Check whether an adapter can ingest a specific source path."""
+    try:
+        report = default_registry().can_ingest(adapter_id, source)
+    except KeyError as exc:
+        raise typer.BadParameter(str(exc)) from exc
+    payload = report.model_dump(mode="json")
+    if json_output:
+        console.print_json(json.dumps(payload))
+        return
+    console.print(f"adapter: {payload['adapter_id']}")
+    console.print(f"source: {source}")
+    console.print(f"status: {payload['status']}")
+    if payload["errors"]:
+        for error in payload["errors"]:
+            console.print(f"error: {error}")
 
 
 @claim_app.command("check")

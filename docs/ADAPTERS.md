@@ -4,6 +4,19 @@ Mechanistic Workbench adapters are thin, audited boundaries over real external t
 They do not replace backend libraries, and they do not make diagnostic metadata into
 claim-bearing evidence.
 
+Adapter registry commands separate static adapter metadata from source-specific
+capability checks:
+
+```bash
+uv run mwb adapters list --json
+uv run mwb adapters inspect generic-bundle --json
+uv run mwb adapters can-ingest generic-bundle tests/fixtures/generic_runs/control_leak --json
+uv run mwb ingest external generic-bundle tests/fixtures/generic_runs/control_leak
+```
+
+`generic-bundle` imports MWB-shaped artifact bundles that already contain
+generic contracts such as `run_manifest.json` and `control_metrics.json`.
+
 Every adapter conformance command writes:
 
 - `.mechanism/adapters/<adapter>/manifest.json`
@@ -17,6 +30,7 @@ file-backed records.
 
 | Adapter | Dependency posture | Main purpose | Claim-bearing |
 | --- | --- | --- | --- |
+| `generic-bundle` | built in | import MWB-shaped artifact bundles | no |
 | `transformer-lens` | required P0 dependency | model load, hook identity, activation capture | yes, after full conformance pass |
 | `saelens` | required P0 dependency | SAE identity, hook compatibility, feature refs | yes, after full conformance pass |
 | `nnsight` | optional P1 dependency | HF-exact tracing/intervention target, nnterp naming when installed | no |

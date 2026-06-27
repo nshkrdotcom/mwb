@@ -46,7 +46,16 @@ Run or validate the built-in negation demo:
 uv run mwb demo negation --model EleutherAI/pythia-70m-deduped --device cpu --dry-run
 ```
 
-The dry-run output is diagnostic-only and non-claim-bearing.
+The dry-run output is diagnostic-only and non-claim-bearing. It also
+materializes a generic dry-run artifact set, so these commands work immediately
+afterward:
+
+```bash
+uv run mwb card latest
+uv run mwb diagnose latest
+uv run mwb next-probe latest --materialize
+uv run mwb graph rebuild
+```
 
 ## Sweep Artifacts
 
@@ -70,21 +79,32 @@ The emitted files include `sweep_config.json`, `run_manifest.json`,
 
 ## Adapter Registry
 
+Adapter inspection and source capability checks are separate:
+
 ```bash
 uv run mwb adapters list --json
-uv run mwb adapters inspect self-ground --json
-uv run mwb ingest external <adapter-id> <source>
+uv run mwb adapters inspect generic-bundle --json
+uv run mwb adapters can-ingest generic-bundle tests/fixtures/generic_runs/control_leak --json
 ```
 
 Adapters map external artifacts into generic MWB artifacts. Adapter ingestion
 does not upgrade evidence tier or make a run claim-bearing.
+
+Ingest a neutral MWB-shaped artifact bundle:
+
+```bash
+uv run mwb ingest external generic-bundle tests/fixtures/generic_runs/control_leak
+```
 
 ## Optional Dogfood Adapter
 
 SELF-GROUND is available only as an optional dogfood adapter:
 
 ```bash
+uv run mwb adapters inspect self-ground --json
+uv run mwb adapters can-ingest self-ground /path/to/self-ground/runs/<run-id> --json
 uv run mwb ingest self-ground /path/to/self-ground/runs/<run-id>
+uv run mwb ingest external self-ground /path/to/self-ground/runs/<run-id>
 ```
 
 See `docs/adapters/self_ground/README.md`.

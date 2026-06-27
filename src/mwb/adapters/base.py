@@ -18,6 +18,15 @@ class AdapterCapabilityReport(BaseModel):
     errors: list[str] = Field(default_factory=list)
 
 
+class AdapterMetadata(BaseModel):
+    adapter_id: str
+    display_name: str
+    status: str = "available"
+    modes: list[str] = Field(default_factory=list)
+    claim_bearing: bool = False
+    notes: list[str] = Field(default_factory=list)
+
+
 class ArtifactValidationReport(BaseModel):
     adapter_id: str
     status: str
@@ -38,6 +47,9 @@ class IngestResult(BaseModel):
 class ArtifactIngestAdapter(Protocol):
     adapter_id: str
     display_name: str
+    modes: list[str]
+    claim_bearing: bool
+    notes: list[str]
 
     def can_ingest(self, source: Path) -> AdapterCapabilityReport:
         """Report whether this adapter can ingest a source path."""

@@ -225,6 +225,40 @@ def test_self_ground_ingest_cli_and_latest_resolution(tmp_path: Path, monkeypatc
     )
 
 
+def test_self_ground_alias_and_external_dispatch_emit_same_result_shape(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    init_git_repo(tmp_path)
+    monkeypatch.chdir(tmp_path)
+    ProjectManager.init(tmp_path, name="mwb-demo")
+    source = tmp_path / "e004_specificity_rescue_matrix"
+    write_e004_artifact(source)
+    runner = CliRunner()
+
+    alias = runner.invoke(app, ["ingest", "self-ground", str(source)])
+    external = runner.invoke(app, ["ingest", "external", "self-ground", str(source)])
+
+    assert alias.exit_code == 0, alias.output
+    assert external.exit_code == 0, external.output
+    alias_payload = json.loads(alias.output)
+    external_payload = json.loads(external.output)
+    assert alias_payload.keys() == external_payload.keys()
+    assert alias_payload["adapter_id"] == external_payload["adapter_id"] == "self-ground"
+    assert alias_payload["run_ref"] == external_payload["run_ref"]
+    assert alias_payload["status"] == external_payload["status"] == "insufficient_evidence"
+
+
+def test_self_ground_ingest_help_shows_alias_and_generic_dispatcher() -> None:
+    runner = CliRunner()
+
+    help_result = runner.invoke(app, ["ingest", "--help"])
+
+    assert help_result.exit_code == 0, help_result.output
+    assert "self-ground" in help_result.output
+    assert "external" in help_result.output
+
+
 def test_generic_ingest_dispatcher_routes_to_self_ground_adapter(
     tmp_path: Path, monkeypatch
 ) -> None:
@@ -253,7 +287,8 @@ def test_adapter_registry_cli_exposes_self_ground_as_optional_dogfood() -> None:
     assert inspected.exit_code == 0, inspected.output
     list_payload = json.loads(listed.output)
     inspect_payload = json.loads(inspected.output)
-    assert list_payload["adapters"][0]["adapter_id"] == "self-ground"
+    adapters = {row["adapter_id"]: row for row in list_payload["adapters"]}
+    assert "self-ground" in adapters
     assert inspect_payload["adapter_id"] == "self-ground"
     assert inspect_payload["claim_bearing"] is False
     assert "Optional dogfood adapter" in inspect_payload["notes"]
@@ -274,3 +309,60 @@ def test_draft_guard_ignores_blocked_terms_inside_claim_marker() -> None:
     )
 
     assert report["status"] == "allowed"
+
+
+def test_old_self_ground_run_ref_directory_remains_readable(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    init_git_repo(tmp_path)
+    project = ProjectManager.init(tmp_path, name="mwb-demo")
+    monkeypatch.chdir(tmp_path)
+    run_ref = "run_self_ground_e004_specificity_rescue_matrix"
+    run_dir = project.mechanism_dir / "runs" / run_ref
+    run_dir.mkdir(parents=True)
+    (run_dir / "run_manifest.json").write_text(
+        json.dumps(
+            {
+                "run_ref": run_ref,
+                "source_kind": "external_adapter_ingest",
+                "adapter_id": "self-ground",
+                "status": "insufficient_evidence",
+                "claim_bearing": False,
+                "evidence_posture": "diagnostic_insufficient",
+                "tried_axes": {},
+                "available_axes": {},
+                "backend_capabilities": {},
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    (run_dir / "control_metrics.json").write_text(
+        json.dumps({"target_delta": 0.9, "matched_control_delta": 0.82}) + "\n",
+        encoding="utf-8",
+    )
+    (run_dir / "blocker_report.json").write_text(
+        json.dumps(
+            {
+                "wb_ref": "blocker_legacy_self_ground",
+                "wb_type": "BlockerReport",
+                "run_ref": run_ref,
+                "blockers": ["control_leaky"],
+                "primary_blocker": "control_leaky",
+                "blocking_metrics": [],
+                "parents": [run_ref],
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    runner = CliRunner()
+
+    card = runner.invoke(app, ["card", run_ref])
+    diagnose = runner.invoke(app, ["diagnose", run_ref])
+
+    assert card.exit_code == 0, card.output
+    assert diagnose.exit_code == 0, diagnose.output
+    assert json.loads(card.output)["run_ref"] == run_ref
+    assert json.loads(diagnose.output)["source_run_ref"] == run_ref

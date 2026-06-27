@@ -1,11 +1,10 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
 
 import typer
 
-from mwb.adapters.base import AdapterCapabilityReport, ArtifactIngestAdapter
+from mwb.adapters.base import AdapterCapabilityReport, AdapterMetadata, ArtifactIngestAdapter
 
 
 class AdapterRegistry:
@@ -22,44 +21,51 @@ class AdapterRegistry:
             available = ", ".join(sorted(self._adapters)) or "<none>"
             raise KeyError(f"unknown adapter {adapter_id!r}; available: {available}") from exc
 
-    def list_capabilities(self, *, source: Path | None = None) -> list[AdapterCapabilityReport]:
-        reports: list[AdapterCapabilityReport] = []
+    def list_metadata(self) -> list[AdapterMetadata]:
+        reports: list[AdapterMetadata] = []
         for adapter in sorted(self._adapters.values(), key=lambda item: item.adapter_id):
-            if source is None:
-                reports.append(
-                    AdapterCapabilityReport(
-                        adapter_id=adapter.adapter_id,
-                        display_name=adapter.display_name,
-                        status="available",
-                        modes=["ingest"],
-                        claim_bearing=False,
-                        notes=[
-                            "Registered ingest adapter",
-                            "Adapter metadata does not define MWB core ontology",
-                        ],
-                    )
-                )
-            else:
-                reports.append(adapter.can_ingest(source))
+            reports.append(self.inspect(adapter.adapter_id))
         return reports
 
-    def inspect(self, adapter_id: str) -> dict[str, Any]:
+    def list_capabilities(self, *, source: Path | None = None) -> list[AdapterCapabilityReport]:
+        if source is None:
+            return [
+                AdapterCapabilityReport(
+                    adapter_id=metadata.adapter_id,
+                    display_name=metadata.display_name,
+                    status=metadata.status,
+                    modes=metadata.modes,
+                    claim_bearing=metadata.claim_bearing,
+                    notes=metadata.notes,
+                )
+                for metadata in self.list_metadata()
+            ]
+        return [
+            adapter.can_ingest(source)
+            for adapter in sorted(self._adapters.values(), key=lambda item: item.adapter_id)
+        ]
+
+    def inspect(self, adapter_id: str) -> AdapterMetadata:
         adapter = self.get(adapter_id)
-        capability = adapter.can_ingest(Path.cwd())
-        return {
-            "adapter_id": adapter.adapter_id,
-            "display_name": adapter.display_name,
-            "status": "available",
-            "modes": sorted(set(capability.modes or ["ingest"])),
-            "claim_bearing": capability.claim_bearing,
-            "notes": capability.notes,
-        }
+        return AdapterMetadata(
+            adapter_id=adapter.adapter_id,
+            display_name=adapter.display_name,
+            status="available",
+            modes=sorted(set(getattr(adapter, "modes", ["ingest"]))),
+            claim_bearing=bool(getattr(adapter, "claim_bearing", False)),
+            notes=list(getattr(adapter, "notes", [])),
+        )
+
+    def can_ingest(self, adapter_id: str, source: Path) -> AdapterCapabilityReport:
+        return self.get(adapter_id).can_ingest(source)
 
 
 def default_registry() -> AdapterRegistry:
     registry = AdapterRegistry()
+    from mwb.adapters.generic_bundle import GenericBundleIngestAdapter
     from mwb.adapters.self_ground.ingest import SelfGroundIngestAdapter
 
+    registry.register(GenericBundleIngestAdapter())
     registry.register(SelfGroundIngestAdapter())
     return registry
 

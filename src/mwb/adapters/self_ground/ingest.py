@@ -24,6 +24,9 @@ from mwb.workflows.next_probe import build_next_probe, write_next_probe
 class SelfGroundIngestAdapter:
     adapter_id = ADAPTER_ID
     display_name = DISPLAY_NAME
+    modes = ["ingest"]
+    claim_bearing = False
+    notes = ["Optional dogfood adapter", "Does not define MWB core ontology"]
 
     def can_ingest(self, source: Path) -> AdapterCapabilityReport:
         if not source.exists():
@@ -31,9 +34,9 @@ class SelfGroundIngestAdapter:
                 adapter_id=self.adapter_id,
                 display_name=self.display_name,
                 status="unavailable",
-                modes=["ingest"],
-                claim_bearing=False,
-                notes=["Optional dogfood adapter", "Does not define MWB core ontology"],
+                modes=list(self.modes),
+                claim_bearing=self.claim_bearing,
+                notes=list(self.notes),
                 errors=[f"source does not exist: {source}"],
             )
         if not source.is_dir():
@@ -41,9 +44,9 @@ class SelfGroundIngestAdapter:
                 adapter_id=self.adapter_id,
                 display_name=self.display_name,
                 status="unavailable",
-                modes=["ingest"],
-                claim_bearing=False,
-                notes=["Optional dogfood adapter", "Does not define MWB core ontology"],
+                modes=list(self.modes),
+                claim_bearing=self.claim_bearing,
+                notes=list(self.notes),
                 errors=[f"source is not a directory: {source}"],
             )
         expected = ["capability.json", "matrix_run_summary.json", "comparison/comparison.json"]
@@ -52,9 +55,9 @@ class SelfGroundIngestAdapter:
             adapter_id=self.adapter_id,
             display_name=self.display_name,
             status="available" if not missing else "unavailable",
-            modes=["ingest"],
-            claim_bearing=False,
-            notes=["Optional dogfood adapter", "Does not define MWB core ontology"],
+            modes=list(self.modes),
+            claim_bearing=self.claim_bearing,
+            notes=list(self.notes),
             errors=[f"missing recognizable source artifact: {item}" for item in missing],
         )
 
